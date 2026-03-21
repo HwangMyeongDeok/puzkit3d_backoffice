@@ -117,9 +117,18 @@ export function PriceDetailsAccordion({ variantId }: PriceDetailsAccordionProps)
   const onSubmit = async (values: PriceFormValues) => {
     try {
       if (editingDetail) {
+        const updatePayload: { unitPrice: number; isActive?: boolean } = {
+          unitPrice: values.unitPrice,
+          isActive: values.isActive,
+        };
+        
+        if (values.isActive === editingDetail.isActive) {
+          delete updatePayload.isActive;
+        }
+
         await updateMutation.mutateAsync({
           id: editingDetail.id,
-          data: { unitPrice: values.unitPrice, isActive: values.isActive },
+          data: updatePayload,
         });
         toast.success('Price detail updated');
       } else {
