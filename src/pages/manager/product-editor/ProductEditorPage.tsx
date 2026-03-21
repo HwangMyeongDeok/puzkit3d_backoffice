@@ -23,7 +23,7 @@ export function ProductEditorPage() {
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
-  }
+  } 
 
   if (!isCreateMode && productError) {
     return (

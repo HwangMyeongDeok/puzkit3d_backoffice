@@ -71,10 +71,16 @@ export function VariantSheet({
         toast.success('Variant created successfully!');
         onOpenChange(false);
       } else if (variant) {
+        let updatePayload: Partial<VariantFormValues> = { ...values };
+        if (values.isActive === variant.isActive) {
+          const { isActive, ...rest } = updatePayload;
+          updatePayload = rest;
+        }
+
         await updateMutation.mutateAsync({
           productId,
           variantId: variant.id,
-          data: values,
+          data: updatePayload,
         });
         toast.success('Variant updated successfully!');
         onOpenChange(false);

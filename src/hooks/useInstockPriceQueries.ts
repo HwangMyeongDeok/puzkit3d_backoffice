@@ -6,7 +6,6 @@ import type {
   UpdateInstockPriceRequestDto,
 } from '@/types/types';
 
-// Keys chuẩn cho TanStack Query
 export const INSTOCK_PRICE_KEYS = {
   all: ['instock-prices'] as const,
   lists: () => [...INSTOCK_PRICE_KEYS.all, 'list'] as const,
@@ -16,7 +15,13 @@ export const INSTOCK_PRICE_KEYS = {
   detail: (id: string) => [...INSTOCK_PRICE_KEYS.details(), id] as const,
 };
 
-// 1. GET ALL (Có phân trang, search, filter)
+const invalidateLists = (queryClient: ReturnType<typeof useQueryClient>) =>
+  queryClient.invalidateQueries({
+    queryKey: INSTOCK_PRICE_KEYS.lists(),
+    refetchType: 'all',
+  });
+
+// 1. GET ALL
 export const useInstockPrices = (params: InstockPriceQueryConfig) => {
   return useQuery({
     queryKey: INSTOCK_PRICE_KEYS.list(params),
@@ -25,7 +30,7 @@ export const useInstockPrices = (params: InstockPriceQueryConfig) => {
   });
 };
 
-// 2. GET BY ID (Lấy chi tiết 1 chiến dịch giá)
+// 2. GET BY ID
 export const useInstockPriceById = (id: string) => {
   return useQuery({
     queryKey: INSTOCK_PRICE_KEYS.detail(id),
@@ -34,65 +39,57 @@ export const useInstockPriceById = (id: string) => {
   });
 };
 
-// 3. CREATE (Tạo chiến dịch giá mới)
+// 3. CREATE
 export const useCreateInstockPrice = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (data: CreateInstockPriceRequestDto) =>
       priceApi.createInstockPrice(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: INSTOCK_PRICE_KEYS.lists() });
-    },
+    onSuccess: () => invalidateLists(queryClient),
   });
 };
 
-// 4. UPDATE (Sửa chiến dịch giá)
+// 4. UPDATE
 export const useUpdateInstockPrice = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateInstockPriceRequestDto }) =>
       priceApi.updateInstockPrice(id, data),
-    onSuccess: (_, variables) => {
+    onSuccess: (_, { id }) => {
+      invalidateLists(queryClient);
       queryClient.invalidateQueries({
-        queryKey: INSTOCK_PRICE_KEYS.lists(),
-      });
-      queryClient.invalidateQueries({
-        queryKey: INSTOCK_PRICE_KEYS.detail(variables.id),
+        queryKey: INSTOCK_PRICE_KEYS.detail(id),
+        refetchType: 'all',
       });
     },
   });
 };
 
-// 5. TOGGLE / SOFT DELETE (Đã sửa lại logic theo ý ông)
+// 5. TOGGLE STATUS
 export const useToggleInstockPriceStatus = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
       if (isActive) {
-        // Nếu ĐANG BẬT -> gọi DELETE để tắt (Soft delete)
         return priceApi.deactivateInstockPrice(id);
       } else {
-        // Nếu ĐANG TẮT -> Lấy lại data cũ -> Update thành true
         const currentData = await priceApi.getInstockPriceById(id);
-        
-        // Build payload để gửi update (Map từ DTO GET sang DTO UPDATE)
         const updatePayload: UpdateInstockPriceRequestDto = {
           name: currentData.name,
           priority: currentData.priority,
           effectiveFrom: currentData.effectiveFrom,
           effectiveTo: currentData.effectiveTo,
-          isActive: true, // <--- Ghi đè thành true để bật lại
+          isActive: true,
         };
-
         return priceApi.updateInstockPrice(id, updatePayload);
       }
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: INSTOCK_PRICE_KEYS.lists() });
-      queryClient.invalidateQueries({ queryKey: INSTOCK_PRICE_KEYS.detail(variables.id) });
+    onSuccess: (_, { id }) => {
+      invalidateLists(queryClient);
+      queryClient.invalidateQueries({
+        queryKey: INSTOCK_PRICE_KEYS.detail(id),
+        refetchType: 'all',
+      });
     },
   });
 };
