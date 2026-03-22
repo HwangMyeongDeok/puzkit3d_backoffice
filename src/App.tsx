@@ -7,7 +7,7 @@ import { MainLayout } from './components/layout/MainLayout';
 
 import { Login } from './pages/auth/Login';
 import { Unauthorized } from './pages/Unauthorized';
-import { Dashboard } from './pages/Dashboard';
+import { Dashboard } from './pages/order/Dashboard';
 import { OrderManagement } from './pages/OrderManagement';
 import { PartnerApprovals } from './pages/PartnerApprovals';
 import { InstockProductsPage } from './pages/manager/instock-products/InstockProductsPage';

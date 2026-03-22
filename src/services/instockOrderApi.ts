@@ -60,4 +60,11 @@ export const instockOrderApi = {
 
     return response.data;
   },
+
+    getWaybillUrl: async (orderId: string): Promise<string> => {
+    const response = await axiosInstance.get<string>(
+      `/instock-orders/${orderId}/delivery-tracking/waybill-number`,
+    );
+    return response.data;
+  },
 };
