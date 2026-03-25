@@ -7,7 +7,8 @@ import {
   Users, 
   Package,
   LogOut, 
-  Menu
+  Menu,
+  Headset
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -43,7 +44,7 @@ export function MainLayout() {
       icon: Users,
       roles: ['Business Manager'],
     },
-        {
+    {
       title: 'Inventory Management',
       href: '/inventory-management',
       icon: Users,
@@ -54,6 +55,18 @@ export function MainLayout() {
       href: '/partners',
       icon: Users,
       roles: ['Business Manager'],
+    },
+    {
+      title: 'Support Tickets',
+      href:  '/support-tickets',
+      icon:  Headset,
+      roles: ['Staff', "Business Manager"],
+    },
+    {
+      title: 'Feedback Management',
+      href:  '/feedback-management',
+      icon:  Headset,
+      roles: ['Staff', "Business Manager"],
     },
   ];
 

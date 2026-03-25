@@ -43,26 +43,27 @@ export const instockOrderApi = {
     return response.data;
   },
 
-  createDeliveryTracking: async (orderId: string): Promise<void> => {
-    const response = await axiosInstance.post(
-      `/instock-orders/${orderId}/delivery-tracking`,
-    );
+  // createDeliveryTracking: async (data: CreateDeliveryTrackingDto): Promise<void> => {
+  //   const response = await axiosInstance.post(
+  //     `/delivery-trackings`,
+  //     data
+  //   );
 
-    return response.data;
-  },
+  //   return response.data;
+  // },
 
-  getDeliveryTracking: async (
-    orderId: string,
-  ): Promise<InstockOrderDeliveryTrackingDto> => {
-    const response = await axiosInstance.get<InstockOrderDeliveryTrackingDto>(
-      `/instock-orders/${orderId}/delivery-tracking`,
-    );
+  // getDeliveryTracking: async (
+  //   orderId: string,
+  // ): Promise<InstockOrderDeliveryTrackingDto> => {
+  //   const response = await axiosInstance.get<InstockOrderDeliveryTrackingDto>(
+  //     `/instock-orders/${orderId}/delivery-trackings`,
+  //   );
 
-    return response.data;
-  },
+  //   return response.data;
+  // },
 
-    getWaybillUrl: async (orderId: string): Promise<string> => {
-    const response = await axiosInstance.get<string>(
+    getWaybillUrl: async (orderId: string): Promise<{ waybillUrl: string }> => {
+    const response = await axiosInstance.get<{ waybillUrl: string }>(
       `/instock-orders/${orderId}/delivery-tracking/waybill-number`,
     );
     return response.data;
