@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 ───────────────────────────────────────────────────────────────────────────── */
 
 export type TicketType   = 'ReplacePart' | 'Exchange' | 'Return';
-export type TicketStatus = 'Open' | 'InProgress' | 'Resolved' | 'Rejected';
+export type TicketStatus = 'Open' | 'Processing' | 'Resolved' | 'Rejected';
 
 export interface TicketDetailItem {
   id: string;
@@ -38,7 +38,7 @@ export interface SupportTicketDto {
 export interface SupportTicketListItemDto {
   id: string;
   orderId: string;
-  orderCode?: string;
+  code?: string;
   type: TicketType;
   status: TicketStatus;
   reason: string;

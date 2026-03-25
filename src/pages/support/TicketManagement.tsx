@@ -72,11 +72,7 @@ import {
   type SupportTicketListItemDto,
 } from '@/services/supportTicketApi';
 
-import { useNavigate } from 'react-router-dom';
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   Constants
-───────────────────────────────────────────────────────────────────────────── */
+import { useCreateDeliveryTracking } from '@/hooks/useDeliveryQueries';
 
 const PAGE_SIZE = 10;
 const ALL_STATUS = '__ALL__';
@@ -84,15 +80,14 @@ const ALL_STATUS = '__ALL__';
 const TICKET_TYPE_LABEL: Record<string, string> = {
   ReplacePart: 'Replace Part',
   Exchange:    'Exchange',
-  Return:      'Return',
 };
 
-const VALID_STATUSES: TicketStatus[] = ['Open', 'InProgress', 'Resolved', 'Rejected'];
+const VALID_STATUSES: TicketStatus[] = ['Open', 'Processing', 'Resolved', 'Rejected'];
 
 const STATUS_FILTER_OPTIONS = [
   { value: ALL_STATUS,   label: 'All Statuses' },
   { value: 'Open',       label: 'Open' },
-  { value: 'InProgress', label: 'In Progress' },
+  { value: 'Processing', label: 'Processing' },
   { value: 'Resolved',   label: 'Resolved' },
   { value: 'Rejected',   label: 'Rejected' },
 ];
@@ -104,21 +99,15 @@ const STATUS_FILTER_OPTIONS = [
 function TicketStatusBadge({ status }: { status: TicketStatus }) {
   const map: Record<TicketStatus, string> = {
     Open:       'bg-blue-500/10   text-blue-600   border-blue-500/30',
-    InProgress: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30',
+    Processing: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30',
     Resolved:   'bg-green-500/10  text-green-600  border-green-500/30',
     Rejected:   'bg-red-500/10    text-red-600    border-red-500/30',
-  };
-  const labelMap: Record<TicketStatus, string> = {
-    Open:       'Open',
-    InProgress: 'In Progress',
-    Resolved:   'Resolved',
-    Rejected:   'Rejected',
   };
   return (
     <span
       className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold tracking-wide uppercase ${map[status] ?? ''}`}
     >
-      {labelMap[status] ?? status}
+      {status}
     </span>
   );
 }
@@ -134,8 +123,6 @@ const formatDateTime = (value?: string | null) => {
     ? 'N/A'
     : date.toLocaleString('vi-VN');
 };
-
-const shortId = (id: string) => id.split('-')[0].toUpperCase();
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Detail Sheet
@@ -323,7 +310,7 @@ function TicketDetailSheet({
                           onClick={() => handleStatusChange(s)}
                           className="text-xs"
                         >
-                          {s === 'InProgress' ? 'In Progress' : s}
+                          {s}
                         </Button>
                       ))}
                     </div>
@@ -348,7 +335,7 @@ function TicketDetailSheet({
 function TableRowSkeleton() {
   return (
     <TableRow>
-      {Array.from({ length: 7 }).map((_, i) => (
+      {Array.from({ length: 6 }).map((_, i) => (
         <TableCell key={i}>
           <Skeleton className="h-5 w-full" />
         </TableCell>
@@ -358,11 +345,7 @@ function TableRowSkeleton() {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Single Row (ĐÃ THÊM NÚT CREATEREPLACEMENTBUTTON Ở ĐÂY)
-───────────────────────────────────────────────────────────────────────────── */
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   Single Row (ĐÃ GỘP LUÔN NÚT VÀO TRONG)
+   Single Row
 ───────────────────────────────────────────────────────────────────────────── */
 
 function TicketRow({
@@ -370,34 +353,37 @@ function TicketRow({
   onView,
   onDelete,
   isDeleting,
+  onShipmentCreated,
 }: {
   ticket: SupportTicketListItemDto;
   onView:    (id: string) => void;
   onDelete:  (id: string) => void;
   isDeleting: boolean;
+  onShipmentCreated?: () => void;
 }) {
-  const navigate = useNavigate(); // Gọi hook navigate ở đây
+  const createDelivery = useCreateDeliveryTracking();
 
   const canDelete = ticket.status === 'Open';
-  const isTicketClosed = ticket.status === 'Resolved' || ticket.status === 'Rejected';
-  
-  // Chỉ hiện nút cho loại ReplacePart hoặc Exchange
-  const isEligibleForReplacement = ticket.type === 'ReplacePart' || ticket.type === 'Exchange';
 
-  // Hàm xử lý nhảy trang
-  const handleCreateShipment = () => {
-    navigate(
-      `/admin/shipments/new?orderId=${ticket.orderId}&ticketId=${ticket.id}&type=replacement`
-    );
+  // Chỉ hiện nút khi type eligible VÀ status = Processing
+  const showReplacementBtn =
+    (ticket.type === 'ReplacePart' || ticket.type === 'Exchange') &&
+    ticket.status === 'Processing';
+
+  const handleCreateShipment = async () => {
+    await createDelivery.mutateAsync({
+      orderId: ticket.orderId,
+      supportTicketId: ticket.id,
+    });
+    // Refetch dữ liệu sau khi tạo shipping thành công
+    onShipmentCreated?.();
   };
 
   return (
     <TableRow>
+      {/* Ticket Code — dùng ticket.code nếu có, fallback về id */}
       <TableCell className="font-mono text-xs font-medium">
-        #{shortId(ticket.id)}
-      </TableCell>
-      <TableCell className="font-mono text-xs text-muted-foreground">
-        {shortId(ticket.orderId)}
+        {(ticket).code ?? ticket.id}
       </TableCell>
       <TableCell>
         <Badge variant="outline" className="text-xs">
@@ -407,7 +393,7 @@ function TicketRow({
       <TableCell>
         <TicketStatusBadge status={ticket.status} />
       </TableCell>
-      <TableCell className="max-w-[180px]">
+      <TableCell className="max-w-[200px]">
         <p className="truncate text-sm text-muted-foreground">{ticket.reason}</p>
       </TableCell>
       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
@@ -415,18 +401,17 @@ function TicketRow({
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
-          
-          {/* NÚT TẠO SHIPMENT BÊ TRỰC TIẾP VÀO ĐÂY */}
-          {isEligibleForReplacement && (
+
+          {showReplacementBtn && (
             <Button
               size="sm"
               variant="default"
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
               onClick={handleCreateShipment}
-              disabled={isTicketClosed}
+              disabled={createDelivery.isPending}
             >
               <Truck className="h-3.5 w-3.5" />
-              Create Replacement
+              {createDelivery.isPending ? 'Creating...' : 'Create Replacement'}
             </Button>
           )}
 
@@ -505,9 +490,8 @@ export function TicketManagement() {
 
   const totalPages = data?.totalPages ?? 1;
 
-  /* ── stats (derived from current page) ── */
-  const openCount     = data?.items.filter((t) => t.status === 'Open').length     ?? 0;
-  const pendingCount  = data?.items.filter((t) => t.status === 'InProgress').length ?? 0;
+  const openCount    = data?.items.filter((t) => t.status === 'Open').length      ?? 0;
+  const pendingCount = data?.items.filter((t) => t.status === 'Processing').length ?? 0;
 
   /* ─────────────────────────────────────────────────────────────────────── */
   return (
@@ -587,8 +571,7 @@ export function TicketManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ticket ID</TableHead>
-                  <TableHead>Order ID</TableHead>
+                  <TableHead>Ticket Code</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Reason</TableHead>
@@ -602,7 +585,7 @@ export function TicketManagement() {
                 ) : !data?.items.length ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={6}
                       className="h-32 text-center text-muted-foreground"
                     >
                       <div className="flex flex-col items-center gap-2">
@@ -622,6 +605,7 @@ export function TicketManagement() {
                         deleteTicket.isPending &&
                         deleteTicket.variables === ticket.id
                       }
+                      onShipmentCreated={refetch}
                     />
                   ))
                 )}
