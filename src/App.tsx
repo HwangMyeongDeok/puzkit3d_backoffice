@@ -7,14 +7,16 @@ import { MainLayout } from './components/layout/MainLayout';
 
 import { Login } from './pages/auth/Login';
 import { Unauthorized } from './pages/Unauthorized';
-import { Dashboard } from './pages/order/Dashboard';
-import { OrderManagement } from './pages/OrderManagement';
+import { Dashboard } from './pages/Dashboard';
+import { OrderManagement } from './pages/order/OrderManagement';
 import { PartnerApprovals } from './pages/PartnerApprovals';
 import { InstockProductsPage } from './pages/manager/instock-products/InstockProductsPage';
 import { ProductEditorPage } from './pages/manager/product-editor/ProductEditorPage';
-import  PriceManagementPage  from './pages/manager/price/PriceManagementPage';
+import PriceManagementPage from './pages/manager/price/PriceManagementPage';
 import { Toaster } from './components/ui/sonner';
 import { InventoryManagementPage } from './pages/manager/inventory/InventoryManagement';
+import { TicketManagement } from './pages/support/TicketManagement';
+import FeedbackManagement from './pages/feedback/FeedbackManagement';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,7 +43,7 @@ function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Protected Routes Wrapper - Bọc từ ngoài cửa để chặn user chưa login */}
-          <Route 
+          <Route
             element={
               <ProtectedRoute>
                 <MainLayout />
@@ -74,9 +76,16 @@ function App() {
                   <PartnerApprovals />
                 </ProtectedRoute>
               }
-            />
 
-            {/* Products: Accessible ONLY by MANAGER */}
+            />
+               <Route
+              path="/feedback-management"
+              element={
+                <ProtectedRoute allowedRoles={['Business Manager', 'Staff']}>
+                  <FeedbackManagement />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Product Editor: Create & Edit Instock Products */}
             <Route
@@ -116,7 +125,7 @@ function App() {
               }
             />
 
-             <Route
+            <Route
               path="/inventory-management"
               element={
                 <ProtectedRoute allowedRoles={['Business Manager']}>
@@ -124,9 +133,16 @@ function App() {
                 </ProtectedRoute>
               }
             />
-          </Route>
 
-          {/* Catch all - Redirect URL bậy bạ về trang chủ */}
+            <Route
+              path="/support-tickets"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', "Business Manager"]}>
+                  <TicketManagement />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster />

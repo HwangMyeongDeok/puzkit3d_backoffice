@@ -270,15 +270,16 @@ export interface UpdatePartnerProductVariantRequestDto {
 export type InstockOrderStatus =
   | 'Pending'
   | 'Paid'
+    | 'Waiting'
+    |'PickedUp'
+  |'Delivering'
+  |'Delivered'
   | 'Processing'
-  | 'Waiting'
-  | 'Shipping'
-  | 'Delivered'
+    | 'HandedOverToDelivery'
+      | 'Completed'
   | 'Cancelled'
-  | 'Completed'
   | 'Returned'
-  | 'HandedOverToDelivery'
-  | 'Rejected';
+  | 'Expired';
 
 export interface GetCustomerOrdersParams {
   pageNumber: number;
@@ -380,4 +381,8 @@ export interface InstockOrderDeliveryTrackingDto {
   ghnStatus: string;
   orderStatus: InstockOrderStatus;
   statusUpdated: boolean;
+}
+export interface CreateDeliveryTrackingDto {
+  orderId: string;
+  supportTicketId?: string | null;
 }

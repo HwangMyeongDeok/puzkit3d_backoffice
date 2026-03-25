@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  CreateDeliveryTrackingDto,
   GetCustomerOrdersParams,
   InstockOrderStatus,
   UpdateInstockOrderStatusRequestDto,
@@ -67,22 +68,26 @@ export const useUpdateInstockOrderStatus = () => {
   });
 };
 
-export const useCreateInstockOrderDeliveryTracking = () => {
-  const queryClient = useQueryClient();
+// export const useCreateInstockOrderDeliveryTracking = () => {
+//   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (orderId: string) => instockOrderApi.createDeliveryTracking(orderId),
-    onSuccess: (_, orderId) => {
-      queryClient.invalidateQueries({ queryKey: INSTOCK_ORDER_KEYS.lists() });
-      queryClient.invalidateQueries({
-        queryKey: INSTOCK_ORDER_KEYS.detail(orderId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: INSTOCK_ORDER_KEYS.deliveryTracking(orderId),
-      });
-    },
-  });
-};
+//   return useMutation({
+//     mutationFn: (data: CreateDeliveryTrackingDto) => 
+//       instockOrderApi.createDeliveryTracking(data),
+    
+//     // variables chính là cái data ông truyền vào mutateAsync
+//     onSuccess: (_, variables) => {
+//       const orderId = variables.orderId;
+//       queryClient.invalidateQueries({ queryKey: INSTOCK_ORDER_KEYS.lists() });
+//       queryClient.invalidateQueries({
+//         queryKey: INSTOCK_ORDER_KEYS.detail(orderId),
+//       });
+//       queryClient.invalidateQueries({
+//         queryKey: INSTOCK_ORDER_KEYS.deliveryTracking(orderId),
+//       });
+//     },
+//   });
+// };;
 
 export const useInstockOrderDeliveryTracking = (
   orderId: string | null,
