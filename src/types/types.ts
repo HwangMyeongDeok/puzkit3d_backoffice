@@ -31,7 +31,21 @@ export type Capability = CatalogItem;
 
 // 3. Products (Matching API JSON)
 export type DifficultLevel = "Basic" | "Intermediate" | "Advanced";
+export type PartType = 'Structural' | 'Mechanical' | 'Decorative';
 
+export interface Part {
+  id: string;
+  name: string;
+  partType: PartType;
+  code: string; // Auto-generated (PARxxxx)
+  quantity: number;
+}
+
+export interface PartRequest {
+  name: string;
+  partType: PartType;
+  quantity: number;
+}
 // Instock DTOs
 export interface GetInstockProductsParams {
   pageNumber: number;
