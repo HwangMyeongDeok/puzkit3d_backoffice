@@ -188,12 +188,12 @@ export interface GetPartnerProductsParams {
   isActive?: boolean;
 }
 
-export interface PartnerProductDto extends Omit<
-  InstockProductDto,
-  "capabilityIds"
-> {
-  capabilityId: string;
-}
+// export interface PartnerProductDto extends Omit<
+//   InstockProductDto,
+//   "capabilityIds"
+// > {
+//   capabilityId: string;
+// }
 
 export interface CreatePartnerProductRequestDto {
   slug: string;
@@ -400,3 +400,103 @@ export interface CreateDeliveryTrackingDto {
   orderId: string;
   supportTicketId?: string | null;
 }
+
+export type PartnerDto = {
+  id: string;
+  importServiceConfigId: string;
+  name: string;
+  description: string;
+  contactEmail: string;
+  contactPhone: string;
+  address: string;
+  slug: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GetPartnersResponse = {
+  items: PartnerDto[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
+export type UpsertPartnerRequest = {
+  importServiceConfigId: string;
+  name: string;
+  contactEmail: string;
+  contactPhone: string;
+  address: string;
+  slug: string;
+  description: string;
+};
+
+export type ImportServiceConfigDto = {
+  id: string;
+  baseShippingFee: number;
+  countryCode: string;
+  countryName: string;
+  importTaxPercentage: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GetImportServiceConfigsResponse = {
+  items: ImportServiceConfigDto[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
+export type UpsertImportServiceConfigRequest = {
+  baseShippingFee: number;
+  countryCode: string;
+  countryName: string;
+  importTaxPercentage: number;
+};
+
+export type PartnerProductDto = {
+  id: string;
+  partnerId: string;
+  name: string;
+  referencePrice: number;
+  quantity: number;
+  thumbnailUrl: string;
+  previewAsset?: Record<string, string> | string[];
+  previewAssets?: string[];
+  slug: string;
+  description: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type GetPartnerProductsResponse = {
+  items: PartnerProductDto[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
+export type UpsertPartnerProductRequest = {
+  partnerId: string;
+  name: string;
+  referencePrice: number;
+  quantity: number;
+  thumbnailUrl: string;
+  previewAsset: string[];
+  slug: string;
+  description: string;
+  isActive: boolean;
+};
