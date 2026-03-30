@@ -17,7 +17,10 @@ import { Toaster } from './components/ui/sonner';
 import { InventoryManagementPage } from './pages/manager/inventory/InventoryManagement';
 import { TicketManagement } from './pages/support/TicketManagement';
 import FeedbackManagement from './pages/feedback/FeedbackManagement';
-
+import { PartnerProductsPage } from "./pages/partner-products/PartnerProductsPage";
+import { PartnerProductCreatePage } from "./pages/partner-products/PartnerProductCreatePage";
+import { PartnerProductEditPage } from "./pages/partner-products/PartnerProductEditPage";
+import { ImportServiceConfigsPage } from './pages/ImportServiceConfigsPage';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -78,7 +81,42 @@ function App() {
               }
 
             />
-               <Route
+            <Route
+              path="/partner-products"
+              element={
+                <ProtectedRoute allowedRoles={["Business Manager"]}>
+                  <PartnerProductsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/partner-products/new"
+              element={
+                <ProtectedRoute allowedRoles={["Business Manager"]}>
+                  <PartnerProductCreatePage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/partner-products/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={["Business Manager"]}>
+                  <PartnerProductEditPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/import-service-configs"
+              element={
+                <ProtectedRoute allowedRoles={['Business Manager']}>
+                  <ImportServiceConfigsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/feedback-management"
               element={
                 <ProtectedRoute allowedRoles={['Business Manager', 'Staff']}>
