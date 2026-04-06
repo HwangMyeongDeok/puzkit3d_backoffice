@@ -21,6 +21,8 @@ import { PartnerProductsPage } from "./pages/partner-products/PartnerProductsPag
 import { PartnerProductCreatePage } from "./pages/partner-products/PartnerProductCreatePage";
 import { PartnerProductEditPage } from "./pages/partner-products/PartnerProductEditPage";
 import { ImportServiceConfigsPage } from './pages/ImportServiceConfigsPage';
+import RequestManagement from './pages/requests/RequestManagement';
+import RequirementManagement from './pages/requirement/RequirementManagement';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -177,6 +179,24 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['Staff', "Business Manager"]}>
                   <TicketManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/requests"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', "Business Manager"]}>
+                  <RequestManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/requirements"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', "Business Manager"]}>
+                  <RequirementManagement />
                 </ProtectedRoute>
               }
             />

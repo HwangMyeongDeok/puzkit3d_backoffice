@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi } from "@/services/inventoryApi";
-import { toast } from "sonner"; // Hoặc thư viện toast ông đang dùng
+import { toast } from "sonner";
 
 export const useCreateInventory = (productId: string) => {
   const queryClient = useQueryClient();

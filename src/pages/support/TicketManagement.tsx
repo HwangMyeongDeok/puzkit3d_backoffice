@@ -1,5 +1,3 @@
-// src/pages/support/TicketManagement.tsx
-
 import React, { useState } from 'react';
 import {
   Ticket,
@@ -218,11 +216,7 @@ export function TicketDetailDialog({
     setSubmittingStaffProof(true);
     try {
       const customPath = `support-tickets/${ticketId}-${Date.now()}`;
-      // LƯU Ý: Đảm bảo ông có import uploadApi
       const imageUrl = await uploadApi.uploadFileToS3(selectedFile, 'support-tickets', customPath);
-      
-      // GỌI HOOK LƯU VÀO DB CỦA TICKET TẠI ĐÂY
-      // await updateTicketEvidenceAsync({ id: ticketId, staffProofUrl: imageUrl });
 
       toast.success("Resolution proof uploaded successfully!");
       setSelectedFile(null);
@@ -233,27 +227,20 @@ export function TicketDetailDialog({
       setSubmittingStaffProof(false);
     }
   };
-
-  // HÀM CHÍNH: HAND OVER Y HỆT BÊN ORDER
-  // HÀM CHÍNH: HAND OVER Y HỆT BÊN ORDER (ĐÃ BỎ UPDATE STATUS)
   const confirmHandOver = async () => {
     if (!handOverDialogTrackingId || !handOverFile || !ticket) return;
     const trackingId = handOverDialogTrackingId;
     
     setSubmittingHandOver(prev => ({ ...prev, [trackingId]: true }));
     try {
-      // 1. Upload to S3
       const customPath = `hand-overs/${trackingId}-${Date.now()}`;
       const imageUrl = await uploadApi.uploadFileToS3(handOverFile, 'deliveries', customPath);
       
-      // 2. Cập nhật ảnh lên Tracking API
       await updateHandOverImage({ id: trackingId, imageUrl });
       
-      // 3. Xử lý UI sau khi up ảnh thành công (Không cần update order status)
       setSuccessHandOver(prev => ({ ...prev, [trackingId]: true }));
-      await refetchDeliveries(); // Refetch lại danh sách delivery để load lại cái ảnh mới up
+      await refetchDeliveries();
       
-      // Tắt loading và đóng dialog
       setSubmittingHandOver(prev => ({ ...prev, [trackingId]: false }));
       setHandOverDialogTrackingId(null); 
       toast.success("Hand over image uploaded successfully!");
