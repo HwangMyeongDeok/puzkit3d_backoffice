@@ -27,7 +27,6 @@ export const INSTOCK_ORDER_STATUSES: InstockOrderStatus[] = [
   'Completed',
   'Returned',
   'HandedOverToDelivery',
-  'Rejected',
 ];
 
 export const useCustomerOrders = (params: GetCustomerOrdersParams) => {

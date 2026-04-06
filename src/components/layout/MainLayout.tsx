@@ -81,6 +81,19 @@ export function MainLayout() {
     icon: Headset,
     roles: ['Staff', 'Business Manager'],
   },
+  {
+    title: 'Requests',
+    href: '/requests',
+    icon: Headset,
+    roles: ['Staff', 'Business Manager'],
+  },
+  {
+    title: 'Requirements',
+    href: '/requirements',
+    icon: Headset,
+    roles: ['Staff', 'Business Manager'],
+  }
+
 ];
 
   // Filter items based on current user's role

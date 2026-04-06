@@ -500,3 +500,87 @@ export type UpsertPartnerProductRequest = {
   description: string;
   isActive: boolean;
 };
+
+export interface CustomDesignRequest {
+  id: string;
+  code: string;
+  customerId: string;
+  customDesignRequirementId: string;
+  desiredLengthMm: number;
+  desiredWidthMm: number;
+  desiredHeightMm: number;
+  sketchesUrls: string[];
+  customerPrompt: string;
+  desiredDeliveryDate: string;
+  desiredQuantity: number;
+  targetBudget: number;
+  usedSupportConceptDesignTime: number;
+  status: string;
+  note: string;
+  type: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetRequestsParams {
+  pageNumber?: number;
+  pageSize?: number;
+  status?: string;
+}
+
+export interface UpdateCustomDesignRequestPayload {
+  desiredLengthMm: number;
+  desiredWidthMm: number;
+  desiredHeightMm: number;
+  sketches: string[];
+  customerPrompt: string;
+  desiredDeliveryDate: string;
+  desiredQuantity: number;
+  targetBudget: number;
+  status: string;
+  note: string;
+}
+
+
+export interface CustomDesignRequirement {
+  id: string;
+  code: string;
+  topicId: string;
+  materialId: string;
+  assemblyMethodId: string;
+  difficulty: string;
+  minPartQuantity: number;
+  maxPartQuantity: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  capabilityIds: string[];
+}
+
+export interface UpsertRequirementPayload {
+  topicId: string;
+  materialId: string;
+  assemblyMethodId: string;
+  difficulty: string;
+  minPartQuantity: number;
+  maxPartQuantity: number;
+  isActive?: boolean;
+  capabilityIds: string[];
+}
+
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  emailConfirmed: boolean;
+  createdAt: string;
+  updatedAt: string;
+  provinceName: string;
+  districtName: string;
+  wardName: string;
+  streetAddress: string;
+  role: string;
+  isDeleted: boolean;
+}
