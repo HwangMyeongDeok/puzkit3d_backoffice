@@ -23,7 +23,7 @@ export function MainLayout() {
 
   // Define navigation items with their required roles
   const navItems = [
-<<<<<<< HEAD
+
   {
     title: 'Dashboard',
     href: '/',
@@ -98,81 +98,6 @@ export function MainLayout() {
   }
 
 ];
-=======
-    {
-      title: 'Dashboard',
-      href: '/',
-      icon: LayoutDashboard,
-      roles: ['Staff', 'Business Manager'],
-    },
-    {
-      title: 'Orders',
-      href: '/orders',
-      icon: ShoppingCart,
-      roles: ['Staff', 'Business Manager'],
-    },
-    {
-      title: 'Instock Products',
-      href: '/instock-products',
-      icon: Package,
-      roles: ['Staff', 'Business Manager'],
-    },
-    {
-      title: 'Price Management',
-      href: '/price-management',
-      icon: Users,
-      roles: ['Business Manager'],
-    },
-    {
-      title: 'Inventory Management',
-      href: '/inventory-management',
-      icon: Users,
-      roles: ['Business Manager'],
-    },
-    {
-      title: 'Partner Approvals',
-      href: '/partners',
-      icon: Users,
-      roles: ['Staff', 'Business Manager'],
-    },
-    {
-      title: 'Partner Products',
-      href: '/partner-products',
-      icon: Package,
-      roles: ['Staff', 'Business Manager'],
-    },
-    {
-      title: 'Import Service Config',
-      href: '/import-service-configs',
-      icon: Settings,
-      roles: ['Staff', 'Business Manager'],
-    },
-    {
-      title: 'Partner Product Requests',
-      href: '/partner-product-requests',
-      icon: FileText,
-      roles: ['Staff', 'Business Manager'],
-    },
-    {
-      title: 'Support Tickets',
-      href: '/support-tickets',
-      icon: Headset,
-      roles: ['Staff', 'Business Manager'],
-    },
-    {
-      title: 'Feedback Management',
-      href: '/feedback-management',
-      icon: Headset,
-      roles: ['Staff', 'Business Manager'],
-    },
-    {
-      title: 'Catalog',
-      href: '/catalog',
-      icon: LibraryBig,
-      roles: ['Staff', 'Business Manager'],
-    },
-  ];
->>>>>>> a9b8af9 (feat: request product partner)
 
   // Filter items based on current user's role
   const filteredNavItems = navItems.filter(item =>
