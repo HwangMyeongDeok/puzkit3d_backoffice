@@ -1,7 +1,22 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useAuthStore } from "@/store/useAuthStore";
+import {
+  SearchableSelect,
+  type SearchableSelectOption,
+} from "@/components/ui/SearchableSelect";
+import {
+  COUNTRY_CALLING_CODES,
+  findCountryByName,
+} from "@/mock/countryCallingCodes";
 import { Plus, Pencil, Power, X } from "lucide-react";
 import {
   getImportServiceConfigs,
@@ -22,7 +37,9 @@ const initialForm: UpsertImportServiceConfigRequest = {
   countryCode: "",
   countryName: "",
   importTaxPercentage: 0,
+  estimatedDeliveryDays: 0,
 };
+
 function formatCurrencyInput(value: string) {
   const digitsOnly = value.replace(/\D/g, "");
   if (!digitsOnly) return "";
@@ -63,6 +80,22 @@ function parseDecimalInput(value: string) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+function sanitizeIntegerInput(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function validateEstimatedDeliveryDays(value: number) {
+  if (!Number.isInteger(value)) {
+    return "Số ngày giao dự kiến phải là số nguyên.";
+  }
+
+  if (value < 0 || value > 15) {
+    return "Số ngày giao dự kiến phải trong khoảng từ 0 đến 15 ngày.";
+  }
+
+  return null;
+}
+
 function formatCurrencyVND(value: number) {
   return `${value.toLocaleString("vi-VN")} VNĐ`;
 }
@@ -70,6 +103,7 @@ function formatCurrencyVND(value: number) {
 function formatPercentage(value: number) {
   return `${value.toLocaleString("vi-VN")} %`;
 }
+
 export function ImportServiceConfigsPage() {
   const [configs, setConfigs] = useState<ImportServiceConfigDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -79,15 +113,25 @@ export function ImportServiceConfigsPage() {
   const [openModal, setOpenModal] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("create");
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<UpsertImportServiceConfigRequest>(initialForm);
+  const [formData, setFormData] =
+    useState<UpsertImportServiceConfigRequest>(initialForm);
+
   const [baseShippingFeeInput, setBaseShippingFeeInput] = useState("");
   const [importTaxPercentageInput, setImportTaxPercentageInput] = useState("");
+  const [estimatedDeliveryDaysInput, setEstimatedDeliveryDaysInput] =
+    useState("");
+  const [estimatedDeliveryDaysError, setEstimatedDeliveryDaysError] = useState<
+    string | null
+  >(null);
+
+  const user = useAuthStore((state) => state.user);
+  const isManager = user?.role === "Business Manager";
 
   const fetchConfigs = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getImportServiceConfigs(1, 8);
+      const data = await getImportServiceConfigs(1, 8, "", true);
       setConfigs(data.items);
     } catch (err) {
       console.error(err);
@@ -108,6 +152,8 @@ export function ImportServiceConfigsPage() {
     setFormData(initialForm);
     setBaseShippingFeeInput("");
     setImportTaxPercentageInput("");
+    setEstimatedDeliveryDaysInput("");
+    setEstimatedDeliveryDaysError(null);
   };
 
   const openCreateModal = () => {
@@ -116,7 +162,27 @@ export function ImportServiceConfigsPage() {
     setFormData(initialForm);
     setBaseShippingFeeInput("");
     setImportTaxPercentageInput("");
+    setEstimatedDeliveryDaysInput("");
+    setEstimatedDeliveryDaysError(null);
     setOpenModal(true);
+  };
+
+  const handleCountryInputChange = (value: string) => {
+    const matched = findCountryByName(value);
+
+    setFormData((prev) => ({
+      ...prev,
+      countryName: value,
+      countryCode: matched?.code ?? "",
+    }));
+  };
+
+  const handleCountrySelect = (option: SearchableSelectOption) => {
+    setFormData((prev) => ({
+      ...prev,
+      countryName: option.label,
+      countryCode: option.meta ?? "",
+    }));
   };
 
   const openUpdateModal = (config: ImportServiceConfigDto) => {
@@ -127,9 +193,15 @@ export function ImportServiceConfigsPage() {
       countryCode: config.countryCode,
       countryName: config.countryName,
       importTaxPercentage: config.importTaxPercentage,
+      estimatedDeliveryDays: config.estimatedDeliveryDays,
     });
+
     setBaseShippingFeeInput(config.baseShippingFee.toLocaleString("vi-VN"));
-    setImportTaxPercentageInput(String(config.importTaxPercentage).replace(/,/g, "."));
+    setImportTaxPercentageInput(
+      String(config.importTaxPercentage).replace(/,/g, ".")
+    );
+    setEstimatedDeliveryDaysInput(String(config.estimatedDeliveryDays));
+    setEstimatedDeliveryDaysError(null);
     setOpenModal(true);
   };
 
@@ -157,6 +229,31 @@ export function ImportServiceConfigsPage() {
       return;
     }
 
+    if (field === "estimatedDeliveryDays") {
+      const sanitized = sanitizeIntegerInput(value).slice(0, 2);
+      const parsedValue = sanitized === "" ? 0 : Number(sanitized);
+
+      setEstimatedDeliveryDaysInput(sanitized);
+      setFormData((prev) => ({
+        ...prev,
+        estimatedDeliveryDays: parsedValue,
+      }));
+
+      setEstimatedDeliveryDaysError(validateEstimatedDeliveryDays(parsedValue));
+      return;
+    }
+
+    if (field === "countryName") {
+      const selectedCountry = findCountryByName(value);
+
+      setFormData((prev) => ({
+        ...prev,
+        countryName: value,
+        countryCode: selectedCountry?.code ?? "",
+      }));
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -164,6 +261,16 @@ export function ImportServiceConfigsPage() {
   };
 
   const handleSubmit = async () => {
+    const deliveryDaysError = validateEstimatedDeliveryDays(
+      formData.estimatedDeliveryDays
+    );
+
+    if (deliveryDaysError) {
+      setEstimatedDeliveryDaysError(deliveryDaysError);
+      toast.warning(deliveryDaysError);
+      return;
+    }
+
     try {
       setSubmitting(true);
 
@@ -217,26 +324,39 @@ export function ImportServiceConfigsPage() {
     }
   };
 
+  const countryOptions: SearchableSelectOption[] = COUNTRY_CALLING_CODES.map(
+    (country) => ({
+      label: country.name,
+      value: country.name,
+      meta: country.code,
+      searchText: `${country.name} ${country.code}`,
+    })
+  );
+
   return (
-    <div className="flex flex-col gap-6 relative">
+    <div className="relative flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Cấu hình dịch vụ nhập khẩu</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Cấu hình dịch vụ nhập khẩu
+        </h1>
         <p className="text-muted-foreground">
           Quản lý cấu hình dịch vụ nhập khẩu.
         </p>
       </div>
 
-      <div className="flex justify-start">
-        <Button
-          onClick={openCreateModal}
-          variant="outline"
-          size="sm"
-          className="inline-flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Thêm cấu hình
-        </Button>
-      </div>
+      {isManager && (
+        <div className="flex justify-start">
+          <Button
+            onClick={openCreateModal}
+            variant="outline"
+            size="sm"
+            className="inline-flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Thêm cấu hình
+          </Button>
+        </div>
+      )}
 
       {loading && (
         <div className="text-sm text-muted-foreground">
@@ -251,17 +371,22 @@ export function ImportServiceConfigsPage() {
           {configs.map((config) => (
             <Card
               key={config.id}
-              className={`transition-all ${!config.isActive ? "opacity-50 grayscale" : ""}`}
+              className={`transition-all ${
+                !config.isActive ? "opacity-50 grayscale" : ""
+              }`}
             >
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="line-clamp-1">{config.countryName}</CardTitle>
+                  <CardTitle className="line-clamp-1">
+                    {config.countryName}
+                  </CardTitle>
 
                   <span
-                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${config.isActive
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
+                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${
+                      config.isActive
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                    }`}
                   >
                     {config.isActive ? "Đang hoạt động" : "Đã vô hiệu hóa"}
                   </span>
@@ -273,14 +398,30 @@ export function ImportServiceConfigsPage() {
               </CardHeader>
 
               <CardContent className="flex flex-col gap-4">
-                <div className="text-sm space-y-1">
-                  <p><strong>Phí vận chuyển cơ bản:</strong> {formatCurrencyVND(config.baseShippingFee)}</p>
-                  <p><strong>Thuế nhập khẩu:</strong> {formatPercentage(config.importTaxPercentage)}</p>
-                  <p><strong>Tạo lúc:</strong> {new Date(config.createdAt).toLocaleString("vi-VN")}</p>
-                  <p><strong>Cập nhật lúc:</strong> {new Date(config.updatedAt).toLocaleString("vi-VN")}</p>
+                <div className="space-y-1 text-sm">
+                  <p>
+                    <strong>Phí vận chuyển cơ bản:</strong>{" "}
+                    {formatCurrencyVND(config.baseShippingFee)}
+                  </p>
+                  <p>
+                    <strong>Thuế nhập khẩu:</strong>{" "}
+                    {formatPercentage(config.importTaxPercentage)}
+                  </p>
+                  {/* <p>
+                    <strong>Số ngày giao dự kiến:</strong>{" "}
+                    {config.estimatedDeliveryDays} ngày
+                  </p> */}
+                  {/* <p>
+                    <strong>Tạo lúc:</strong>{" "}
+                    {new Date(config.createdAt).toLocaleString("vi-VN")}
+                  </p> */}
+                  <p>
+                    <strong>Cập nhật lúc:</strong>{" "}
+                    {new Date(config.updatedAt).toLocaleString("vi-VN")}
+                  </p>
                 </div>
 
-                <div className="flex gap-2 w-full pt-2">
+                <div className="flex w-full gap-2 pt-2">
                   <Button
                     className="w-full bg-green-600 hover:bg-green-700"
                     onClick={() => openUpdateModal(config)}
@@ -310,9 +451,11 @@ export function ImportServiceConfigsPage() {
             <div className="flex items-start justify-between border-b px-6 py-4">
               <div>
                 <h2 className="text-2xl font-bold">
-                  {modalMode === "create" ? "Thêm cấu hình mới" : "Cập nhật cấu hình"}
+                  {modalMode === "create"
+                    ? "Thêm cấu hình mới"
+                    : "Cập nhật cấu hình"}
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {modalMode === "create"
                     ? "Nhập thông tin để tạo cấu hình dịch vụ nhập khẩu."
                     : "Chỉnh sửa thông tin cấu hình dịch vụ nhập khẩu."}
@@ -320,6 +463,7 @@ export function ImportServiceConfigsPage() {
               </div>
 
               <button
+                type="button"
                 onClick={closeModal}
                 className="rounded-md p-2 hover:bg-gray-100"
               >
@@ -330,33 +474,39 @@ export function ImportServiceConfigsPage() {
             <div className="space-y-4 px-6 py-5">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Tên quốc gia</label>
-                <input
-                  className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                <SearchableSelect
                   value={formData.countryName}
-                  onChange={(e) => handleChange("countryName", e.target.value)}
-                  placeholder="Nhập tên quốc gia"
+                  options={countryOptions}
+                  placeholder="Nhập hoặc chọn tên quốc gia"
+                  emptyText="Không tìm thấy quốc gia"
+                  onInputChange={handleCountryInputChange}
+                  onSelect={handleCountrySelect}
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Mã quốc gia</label>
                 <input
-                  className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border bg-slate-50 px-3 py-2 text-slate-600 outline-none"
                   value={formData.countryCode}
-                  onChange={(e) => handleChange("countryCode", e.target.value)}
-                  placeholder="Nhập mã quốc gia"
+                  readOnly
+                  placeholder="Mã quốc gia sẽ tự động điền"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Phí vận chuyển cơ bản</label>
+                <label className="text-sm font-medium">
+                  Phí vận chuyển cơ bản
+                </label>
                 <div className="relative">
                   <input
                     type="text"
                     inputMode="numeric"
                     className="w-full rounded-lg border px-3 py-2 pr-16 outline-none focus:ring-2 focus:ring-blue-500"
                     value={baseShippingFeeInput}
-                    onChange={(e) => handleChange("baseShippingFee", e.target.value)}
+                    onChange={(e) =>
+                      handleChange("baseShippingFee", e.target.value)
+                    }
                     placeholder="Nhập phí vận chuyển cơ bản"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
@@ -366,20 +516,67 @@ export function ImportServiceConfigsPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Thuế nhập khẩu (%)</label>
+                <label className="text-sm font-medium">
+                  Thuế nhập khẩu (%)
+                </label>
                 <div className="relative">
                   <input
                     type="text"
                     inputMode="decimal"
                     className="w-full rounded-lg border px-3 py-2 pr-10 outline-none focus:ring-2 focus:ring-blue-500"
                     value={importTaxPercentageInput}
-                    onChange={(e) => handleChange("importTaxPercentage", e.target.value)}
+                    onChange={(e) =>
+                      handleChange("importTaxPercentage", e.target.value)
+                    }
                     placeholder="Nhập phần trăm thuế nhập khẩu"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                     %
                   </span>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Số ngày giao dự kiến
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={2}
+                    className={`w-full rounded-lg border px-3 py-2 pr-14 outline-none focus:ring-2 ${
+                      estimatedDeliveryDaysError
+                        ? "border-red-500 focus:ring-red-500"
+                        : "focus:ring-blue-500"
+                    }`}
+                    value={estimatedDeliveryDaysInput}
+                    onChange={(e) =>
+                      handleChange("estimatedDeliveryDays", e.target.value)
+                    }
+                    onBlur={() =>
+                      setEstimatedDeliveryDaysError(
+                        validateEstimatedDeliveryDays(
+                          formData.estimatedDeliveryDays
+                        )
+                      )
+                    }
+                    placeholder="Nhập số ngày từ 0 đến 15"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    ngày
+                  </span>
+                </div>
+
+                {estimatedDeliveryDaysError ? (
+                  <p className="text-sm text-red-500">
+                    {estimatedDeliveryDaysError}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Giá trị hợp lệ từ 0 đến 15 ngày.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -391,8 +588,8 @@ export function ImportServiceConfigsPage() {
                 {submitting
                   ? "Đang xử lý..."
                   : modalMode === "create"
-                    ? "Thêm cấu hình"
-                    : "Lưu cập nhật"}
+                  ? "Thêm cấu hình"
+                  : "Lưu cập nhật"}
               </Button>
             </div>
           </div>
