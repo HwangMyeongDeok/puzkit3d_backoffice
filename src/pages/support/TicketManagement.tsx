@@ -193,7 +193,7 @@ export function TicketDetailDialog({
   // ---------------------------------------------------------------------------
   // CÁC HÀM XỬ LÝ 
   // ---------------------------------------------------------------------------
-  const handleStatusChange = async (status: string) => {
+  const handleStatusChange = async (status: TicketStatus) => {
     if (!ticketId) return;
     try {
       await updateTicketStatusAsync({ id: ticketId, status });
@@ -432,8 +432,8 @@ export function TicketDetailDialog({
                     </Card>
                   </div>
                   
-                  {/* 3. Affected Items (Mockup array, ông thay bằng list items thật của ticket) */}
-                  {ticket.items && ticket.items.length > 0 && (
+                  {/* 3. Affected Items */}
+                  {ticket.details && ticket.details.length > 0 && (
                      <Card>
                        <CardHeader className="pb-3">
                          <CardTitle className="text-base flex items-center gap-2">
@@ -442,11 +442,15 @@ export function TicketDetailDialog({
                        </CardHeader>
                        <CardContent>
                          <div className="space-y-3">
-                           {ticket.items.map((item: any) => (
+                           {ticket.details.map((item: any) => (
                              <div key={item.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                               {item.thumbnailUrl && (
+                                 <img src={item.thumbnailUrl} alt={item.productName || 'Product thumbnail'} className="w-12 h-12 rounded bg-muted object-cover" />
+                               )}
                                <div className="flex-1">
-                                 <p className="font-medium text-sm">{item.productName || 'Unknown Product'}</p>
+                                 <p className="font-medium text-sm">{item.productName || 'Unknown Product'} {item.variantName ? `- ${item.variantName}` : ''}</p>
                                  <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                                 {item.note && <p className="text-xs text-muted-foreground mt-1 text-red-500">Note: {item.note}</p>}
                                </div>
                              </div>
                            ))}

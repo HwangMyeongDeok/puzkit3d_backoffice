@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, Calendar, MapPin, Shield, Image as ImageIcon, ZoomIn, MessageSquare, Ruler, Package, UserCircle, XCircle, Send, FileText } from 'lucide-react';
+import { Loader2, Calendar, MapPin, Shield, Image as ImageIcon, ZoomIn, MessageSquare, Ruler, Package, UserCircle, XCircle, Send, FileText, Calculator } from 'lucide-react';
 import { CustomerDetailInline } from './CustomerComponents';
 import { RequirementDetailInline } from './RequirementDetailInline';
 import { ZoomableImage } from '@/components/request/ZoomableImage';
 import { formatDate, formatCurrency, getStatusBadge, getTypeBadge } from '@/lib/requestHelpers';
 import type { CustomDesignRequest } from '@/types/types';
+import { useNavigate } from 'react-router-dom';
 
 interface RequestDetailDialogProps {
   selectedRequest: CustomDesignRequest | null;
@@ -21,6 +22,8 @@ export const RequestDetailDialog = ({ selectedRequest, setSelectedRequest, isUpd
   const [reasonNote, setReasonNote] = useState('');
   const [prevRequestId, setPrevRequestId] = useState<string | undefined>(undefined);
   
+  const navigate = useNavigate();
+
   if (selectedRequest?.id !== prevRequestId) {
     setPrevRequestId(selectedRequest?.id);
     setActionRequiringNote(null);
@@ -84,7 +87,6 @@ export const RequestDetailDialog = ({ selectedRequest, setSelectedRequest, isUpd
                 </div>
 
                 {/* Display Request Note (If exists) */}
-                {/* Bạn có thể đổi selectedRequest.note thành trường tương ứng trong DB của bạn (vd: reason, customerNote) */}
                 {selectedRequest.note && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm">
                     <div className="flex items-center text-amber-800 font-bold mb-2 text-sm uppercase tracking-wider">
@@ -196,8 +198,9 @@ export const RequestDetailDialog = ({ selectedRequest, setSelectedRequest, isUpd
               <DialogFooter className="w-full">
                 {activeTab === 'active' ? (
                   actionRequiringNote ? (
-                    // FORM NHẬP LÝ DO (Hiển thị khi bấm Reject hoặc Ask for Info)
+                    // FORM NHẬP LÝ DO (Giữ nguyên không đổi)
                     <div className="w-full flex flex-col animate-in slide-in-from-bottom-2 fade-in duration-200">
+                      {/* ... (Giữ nguyên ruột form textarea của bác) ... */}
                       <div className="mb-3 flex justify-between items-center">
                         <p className="text-sm font-semibold text-slate-800">
                           {actionRequiringNote === 'Rejected' 
@@ -206,7 +209,6 @@ export const RequestDetailDialog = ({ selectedRequest, setSelectedRequest, isUpd
                         </p>
                         <span className="text-xs text-slate-400">Bắt buộc</span>
                       </div>
-                      
                       <textarea
                         value={reasonNote}
                         onChange={(e) => setReasonNote(e.target.value)}
@@ -215,13 +217,9 @@ export const RequestDetailDialog = ({ selectedRequest, setSelectedRequest, isUpd
                         disabled={isUpdating}
                         autoFocus
                       />
-                      
                       <div className="flex justify-end gap-2">
                         <button 
-                          onClick={() => {
-                            setActionRequiringNote(null);
-                            setReasonNote('');
-                          }}
+                          onClick={() => { setActionRequiringNote(null); setReasonNote(''); }}
                           disabled={isUpdating}
                           className="px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors text-sm"
                         >
@@ -243,45 +241,70 @@ export const RequestDetailDialog = ({ selectedRequest, setSelectedRequest, isUpd
                     </div>
                   ) : (
                     // CÁC NÚT MẶC ĐỊNH
-                    <div className="flex flex-wrap sm:justify-end gap-2 w-full">
-                      <button 
-                        disabled={isUpdating} 
-                        onClick={() => setActionRequiringNote('Rejected')} 
-                        className="w-full sm:w-auto px-4 py-2 bg-white border border-red-200 text-red-600 font-medium rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm text-sm disabled:opacity-50"
-                      >
-                        Reject
-                      </button>
-                      <button 
-                        disabled={isUpdating} 
-                        onClick={() => setActionRequiringNote('MissingInformation')} 
-                        className="w-full sm:w-auto px-4 py-2 bg-white border border-orange-200 text-orange-600 font-medium rounded-lg hover:bg-orange-50 hover:border-orange-300 transition-colors shadow-sm text-sm disabled:opacity-50"
-                      >
-                        Ask for Info
-                      </button>
-                      <button 
-                        disabled={isUpdating} 
-                        onClick={() => handleUpdateStatus('Processing')} 
-                        className="w-full sm:w-auto px-4 py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm text-sm disabled:opacity-50"
-                      >
-                        Process Request
-                      </button>
-                      <button 
-                        disabled={isUpdating} 
-                        onClick={() => handleUpdateStatus('Approved')} 
-                        className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20 text-sm disabled:opacity-50"
-                      >
-                        Approve
-                      </button>
+                    <div className="flex flex-col sm:flex-row justify-between w-full gap-3">
+                      {/* NÚT TẠO BÁO GIÁ Ở BÊN TRÁI (Chỉ hiện khi trạng thái là Processing hoặc Approved) */}
+                      <div>
+                        {(selectedRequest.status === 'Processing' || selectedRequest.status === 'Approved') && (
+                          <button 
+                            onClick={() => navigate(`/requests/${selectedRequest.id}/quotation`)}
+                            className="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-sm text-sm flex items-center justify-center"
+                          >
+                            <Calculator className="w-4 h-4 mr-2" />
+                            Create Quotation
+                          </button>
+                        )}
+                      </div>
+
+                      {/* NHÓM NÚT ACTION CŨ Ở BÊN PHẢI */}
+                      <div className="flex flex-wrap justify-end gap-3">
+                        <button 
+                          disabled={isUpdating} 
+                          onClick={() => setActionRequiringNote('Rejected')} 
+                          className="w-full sm:w-auto px-4 py-2 bg-white border border-red-200 text-red-600 font-medium rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm text-sm disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                        <button 
+                          disabled={isUpdating} 
+                          onClick={() => setActionRequiringNote('MissingInformation')} 
+                          className="w-full sm:w-auto px-4 py-2 bg-white border border-orange-200 text-orange-600 font-medium rounded-lg hover:bg-orange-50 hover:border-orange-300 transition-colors shadow-sm text-sm disabled:opacity-50"
+                        >
+                          Ask for Info
+                        </button>
+                        <button 
+                          disabled={isUpdating} 
+                          onClick={() => handleUpdateStatus('Approved')} 
+                          className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20 text-sm disabled:opacity-50"
+                        >
+                          Approve
+                        </button>
+                      </div>
                     </div>
                   )
                 ) : (
-                  <div className="flex justify-end w-full">
-                    <button 
-                      onClick={() => setSelectedRequest(null)} 
-                      className="w-full sm:w-auto px-6 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors text-sm"
-                    >
-                      Close Record
-                    </button>
+                  // TAB HISTORY
+                  <div className="flex flex-col sm:flex-row justify-between w-full gap-3">
+                    {/* BÊ BÊN HISTORY CŨNG HIỆN NÚT TẠO BÁO GIÁ NẾU ĐÃ APPROVED */}
+                    <div>
+                      {selectedRequest.status === 'Approved' && (
+                        <button 
+                          onClick={() => navigate(`/requests/${selectedRequest.id}/quotation`)}
+                          className="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-sm text-sm flex items-center justify-center"
+                        >
+                          <Calculator className="w-4 h-4 mr-2" />
+                          Manage Quotation
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button 
+                        onClick={() => setSelectedRequest(null)} 
+                        className="w-full sm:w-auto px-6 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors text-sm"
+                      >
+                        Close Record
+                      </button>
+                    </div>
                   </div>
                 )}
               </DialogFooter>
