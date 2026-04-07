@@ -7,7 +7,8 @@ import type {
 export async function getImportServiceConfigs(
   pageNumber = 1,
   pageSize = 8,
-  searchTerm = ""
+  searchTerm = "",
+  ascending = true
 ) {
   const response = await axiosInstance.get<GetImportServiceConfigsResponse>(
     "/import-service-configs",
@@ -15,6 +16,7 @@ export async function getImportServiceConfigs(
       params: {
         pageNumber,
         pageSize,
+        ascending,
         ...(searchTerm ? { searchTerm } : {}),
       },
     }
