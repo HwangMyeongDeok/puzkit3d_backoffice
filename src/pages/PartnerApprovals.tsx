@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Power, X } from "lucide-react";
 import { toast } from "sonner";
-
+import { useAuthStore } from "@/store/useAuthStore";
 import {
   getPartners,
   createPartner,
@@ -11,11 +17,12 @@ import {
   disablePartner,
   enablePartner,
 } from "@/services/partnerApi";
-
 import { getImportServiceConfigs } from "@/services/importServiceConfigApi";
-
-import type { PartnerDto, UpsertPartnerRequest } from "@/types/types";
-import type { ImportServiceConfigDto } from "@/types/types";
+import type {
+  ImportServiceConfigDto,
+  PartnerDto,
+  UpsertPartnerRequest,
+} from "@/types/types";
 
 type ModalMode = "create" | "update";
 
@@ -35,19 +42,22 @@ function buildImportServiceLabel(config: ImportServiceConfigDto) {
 
 export function PartnerApprovals() {
   const [partners, setPartners] = useState<PartnerDto[]>([]);
-  const [serviceConfigs, setServiceConfigs] = useState<ImportServiceConfigDto[]>([]);
+  const [serviceConfigs, setServiceConfigs] = useState<ImportServiceConfigDto[]>(
+    []
+  );
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const user = useAuthStore((state) => state.user);
+  const isManager = user?.role === "Business Manager";
+
   const [openModal, setOpenModal] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("create");
-  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(
+    null
+  );
   const [formData, setFormData] = useState<UpsertPartnerRequest>(initialForm);
-
-  const serviceConfigMap = useMemo(() => {
-    return new Map(serviceConfigs.map((item) => [item.id, item]));
-  }, [serviceConfigs]);
 
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
@@ -56,14 +66,38 @@ export function PartnerApprovals() {
     importServiceConfigId?: string;
   }>({});
 
+  const serviceConfigMap = useMemo(() => {
+    return new Map(serviceConfigs.map((item) => [item.id, item]));
+  }, [serviceConfigs]);
+
+  const selectableConfigs = useMemo(() => {
+    const activeConfigs = serviceConfigs.filter((item) => item.isActive);
+
+    if (!formData.importServiceConfigId) {
+      return activeConfigs;
+    }
+
+    const selectedConfig = serviceConfigMap.get(formData.importServiceConfigId);
+
+    if (
+      selectedConfig &&
+      !selectedConfig.isActive &&
+      !activeConfigs.some((item) => item.id === selectedConfig.id)
+    ) {
+      return [selectedConfig, ...activeConfigs];
+    }
+
+    return activeConfigs;
+  }, [formData.importServiceConfigId, serviceConfigs, serviceConfigMap]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
       const [partnerData, configData] = await Promise.all([
-        getPartners(1, 8),
-        getImportServiceConfigs(1, 100),
+        getPartners(1, 8, true),
+        getImportServiceConfigs(1, 100, "", true),
       ]);
 
       setPartners(partnerData.items);
@@ -92,6 +126,7 @@ export function PartnerApprovals() {
     setModalMode("create");
     setSelectedPartnerId(null);
     setFormData(initialForm);
+    setFieldErrors({});
     setOpenModal(true);
   };
 
@@ -107,6 +142,7 @@ export function PartnerApprovals() {
       slug: partner.slug,
       description: partner.description,
     });
+    setFieldErrors({});
     setOpenModal(true);
   };
 
@@ -121,6 +157,7 @@ export function PartnerApprovals() {
       [field]: undefined,
     }));
   };
+
   const validateForm = () => {
     const errors: {
       name?: string;
@@ -134,7 +171,8 @@ export function PartnerApprovals() {
     const normalizedPhone = formData.contactPhone.trim();
 
     if (!formData.importServiceConfigId) {
-      errors.importServiceConfigId = "Vui lòng chọn cấu hình dịch vụ nhập khẩu.";
+      errors.importServiceConfigId =
+        "Vui lòng chọn cấu hình dịch vụ nhập khẩu.";
     }
 
     if (!normalizedName) {
@@ -184,6 +222,7 @@ export function PartnerApprovals() {
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -240,7 +279,7 @@ export function PartnerApprovals() {
   };
 
   return (
-    <div className="flex flex-col gap-6 relative">
+    <div className="relative flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Quản lý đối tác</h1>
         <p className="text-muted-foreground">
@@ -248,20 +287,24 @@ export function PartnerApprovals() {
         </p>
       </div>
 
-      <div className="flex justify-start">
-        <Button
-          onClick={openCreateModal}
-          variant="outline"
-          size="sm"
-          className="inline-flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Thêm đối tác
-        </Button>
-      </div>
+      {isManager && (
+        <div className="flex justify-start">
+          <Button
+            onClick={openCreateModal}
+            variant="outline"
+            size="sm"
+            className="inline-flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Thêm đối tác
+          </Button>
+        </div>
+      )}
 
       {loading && (
-        <div className="text-sm text-muted-foreground">Đang tải danh sách đối tác...</div>
+        <div className="text-sm text-muted-foreground">
+          Đang tải danh sách đối tác...
+        </div>
       )}
 
       {error && <div className="text-sm text-red-500">{error}</div>}
@@ -269,22 +312,27 @@ export function PartnerApprovals() {
       {!loading && !error && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {partners.map((partner) => {
-            const matchedConfig = serviceConfigMap.get(partner.importServiceConfigId);
+            const matchedConfig = serviceConfigMap.get(
+              partner.importServiceConfigId
+            );
 
             return (
               <Card
                 key={partner.id}
-                className={`transition-all ${!partner.isActive ? "opacity-50 grayscale" : ""}`}
+                className={`transition-all ${
+                  !partner.isActive ? "opacity-50 grayscale" : ""
+                }`}
               >
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle className="line-clamp-1">{partner.name}</CardTitle>
 
                     <span
-                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${partner.isActive
+                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${
+                        partner.isActive
                           ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                           : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                        }`}
+                      }`}
                     >
                       {partner.isActive ? "Đang hoạt động" : "Đã vô hiệu hóa"}
                     </span>
@@ -296,11 +344,19 @@ export function PartnerApprovals() {
                 </CardHeader>
 
                 <CardContent className="flex flex-col gap-4">
-                  <div className="text-sm space-y-1">
-                    <p><strong>Email:</strong> {partner.contactEmail}</p>
-                    <p><strong>Số điện thoại:</strong> {partner.contactPhone}</p>
-                    <p><strong>Địa chỉ:</strong> {partner.address}</p>
-                    <p><strong>Slug:</strong> {partner.slug}</p>
+                  <div className="space-y-1 text-sm">
+                    <p>
+                      <strong>Email:</strong> {partner.contactEmail}
+                    </p>
+                    <p>
+                      <strong>Số điện thoại:</strong> {partner.contactPhone}
+                    </p>
+                    <p>
+                      <strong>Địa chỉ:</strong> {partner.address}
+                    </p>
+                    <p>
+                      <strong>Slug:</strong> {partner.slug}
+                    </p>
                     <p>
                       <strong>Cấu hình nhập khẩu:</strong>{" "}
                       {matchedConfig
@@ -309,7 +365,7 @@ export function PartnerApprovals() {
                     </p>
                   </div>
 
-                  <div className="flex gap-2 w-full pt-2">
+                  <div className="flex w-full gap-2 pt-2">
                     <Button
                       className="w-full bg-green-600 hover:bg-green-700"
                       onClick={() => openUpdateModal(partner)}
@@ -340,9 +396,11 @@ export function PartnerApprovals() {
             <div className="flex items-start justify-between border-b px-6 py-4">
               <div>
                 <h2 className="text-2xl font-bold">
-                  {modalMode === "create" ? "Thêm đối tác mới" : "Cập nhật đối tác"}
+                  {modalMode === "create"
+                    ? "Thêm đối tác mới"
+                    : "Cập nhật đối tác"}
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {modalMode === "create"
                     ? "Nhập thông tin để tạo đối tác mới."
                     : "Chỉnh sửa thông tin đối tác."}
@@ -350,6 +408,7 @@ export function PartnerApprovals() {
               </div>
 
               <button
+                type="button"
                 onClick={closeModal}
                 className="rounded-md p-2 hover:bg-gray-100"
               >
@@ -357,7 +416,7 @@ export function PartnerApprovals() {
               </button>
             </div>
 
-            <div className="px-6 py-5 max-h-[70vh] overflow-y-auto">
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Tên đối tác</label>
@@ -377,11 +436,15 @@ export function PartnerApprovals() {
                   <input
                     className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData.contactEmail}
-                    onChange={(e) => handleChange("contactEmail", e.target.value)}
+                    onChange={(e) =>
+                      handleChange("contactEmail", e.target.value)
+                    }
                     placeholder="Nhập email liên hệ"
                   />
                   {fieldErrors.contactEmail && (
-                    <p className="text-sm text-red-500">{fieldErrors.contactEmail}</p>
+                    <p className="text-sm text-red-500">
+                      {fieldErrors.contactEmail}
+                    </p>
                   )}
                 </div>
 
@@ -390,11 +453,18 @@ export function PartnerApprovals() {
                   <input
                     className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData.contactPhone}
-                    onChange={(e) => handleChange("contactPhone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    onChange={(e) =>
+                      handleChange(
+                        "contactPhone",
+                        e.target.value.replace(/\D/g, "").slice(0, 10)
+                      )
+                    }
                     placeholder="Nhập số điện thoại"
                   />
                   {fieldErrors.contactPhone && (
-                    <p className="text-sm text-red-500">{fieldErrors.contactPhone}</p>
+                    <p className="text-sm text-red-500">
+                      {fieldErrors.contactPhone}
+                    </p>
                   )}
                 </div>
 
@@ -430,23 +500,31 @@ export function PartnerApprovals() {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Cấu hình dịch vụ nhập khẩu</label>
+                  <label className="text-sm font-medium">
+                    Cấu hình dịch vụ nhập khẩu
+                  </label>
+
                   <select
-                    className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-lg border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData.importServiceConfigId}
-                    onChange={(e) => handleChange("importServiceConfigId", e.target.value)}
+                    onChange={(e) =>
+                      handleChange("importServiceConfigId", e.target.value)
+                    }
                   >
-                    <option value="">Chọn quốc gia / mã quốc gia</option>
-                    {serviceConfigs
-                      .filter((item) => item.isActive)
-                      .map((config) => (
-                        <option key={config.id} value={config.id}>
-                          {buildImportServiceLabel(config)}
-                        </option>
-                      ))}
+                    <option value="">-- Chọn cấu hình nhập khẩu --</option>
+
+                    {selectableConfigs.map((config) => (
+                      <option key={config.id} value={config.id}>
+                        {buildImportServiceLabel(config)}
+                        {!config.isActive ? " - Ngừng hoạt động" : ""}
+                      </option>
+                    ))}
                   </select>
+
                   {fieldErrors.importServiceConfigId && (
-                    <p className="text-sm text-red-500">{fieldErrors.importServiceConfigId}</p>
+                    <p className="text-sm text-red-500">
+                      {fieldErrors.importServiceConfigId}
+                    </p>
                   )}
                 </div>
               </div>
@@ -460,8 +538,8 @@ export function PartnerApprovals() {
                 {submitting
                   ? "Đang xử lý..."
                   : modalMode === "create"
-                    ? "Thêm đối tác"
-                    : "Lưu cập nhật"}
+                  ? "Thêm đối tác"
+                  : "Lưu cập nhật"}
               </Button>
             </div>
           </div>

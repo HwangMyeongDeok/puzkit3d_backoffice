@@ -1,15 +1,17 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 // Sửa đường dẫn import cho đúng
 import { useAuthStore } from '@/store/useAuthStore';
-import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Users, 
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Users,
   Package,
-  LogOut, 
+  LogOut,
   Menu,
   Headset,
-  Settings
+  Settings,
+  FileText,
+  LibraryBig,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -21,70 +23,82 @@ export function MainLayout() {
 
   // Define navigation items with their required roles
   const navItems = [
-  {
-    title: 'Dashboard',
-    href: '/',
-    icon: LayoutDashboard,
-    roles: ['Staff', 'Business Manager'],
-  },
-  {
-    title: 'Orders',
-    href: '/orders',
-    icon: ShoppingCart,
-    roles: ['Staff', 'Business Manager'],
-  },
-  {
-    title: 'Instock Products',
-    href: '/instock-products',
-    icon: Package,
-    roles: ['Staff', 'Business Manager'],
-  },
-  {
-    title: 'Price Management',
-    href: '/price-management',
-    icon: Users,
-    roles: ['Business Manager'],
-  },
-  {
-    title: 'Inventory Management',
-    href: '/inventory-management',
-    icon: Users,
-    roles: ['Business Manager'],
-  },
-  {
-    title: 'Partner Approvals',
-    href: '/partners',
-    icon: Users,
-    roles: ['Business Manager'],
-  },
-  {
-    title: 'Partner Products',
-    href: '/partner-products',
-    icon: Package,
-    roles: ['Business Manager'],
-  },
-  {
-    title: 'Import Service Config',
-    href: '/import-service-configs',
-    icon: Settings,
-    roles: ['Business Manager'],
-  },
-  {
-    title: 'Support Tickets',
-    href: '/support-tickets',
-    icon: Headset,
-    roles: ['Staff', 'Business Manager'],
-  },
-  {
-    title: 'Feedback Management',
-    href: '/feedback-management',
-    icon: Headset,
-    roles: ['Staff', 'Business Manager'],
-  },
-];
+    {
+      title: 'Dashboard',
+      href: '/',
+      icon: LayoutDashboard,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Orders',
+      href: '/orders',
+      icon: ShoppingCart,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Instock Products',
+      href: '/instock-products',
+      icon: Package,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Price Management',
+      href: '/price-management',
+      icon: Users,
+      roles: ['Business Manager'],
+    },
+    {
+      title: 'Inventory Management',
+      href: '/inventory-management',
+      icon: Users,
+      roles: ['Business Manager'],
+    },
+    {
+      title: 'Partner Approvals',
+      href: '/partners',
+      icon: Users,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Partner Products',
+      href: '/partner-products',
+      icon: Package,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Import Service Config',
+      href: '/import-service-configs',
+      icon: Settings,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Partner Product Requests',
+      href: '/partner-product-requests',
+      icon: FileText,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Support Tickets',
+      href: '/support-tickets',
+      icon: Headset,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Feedback Management',
+      href: '/feedback-management',
+      icon: Headset,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Catalog',
+      href: '/catalog',
+      icon: LibraryBig,
+      roles: ['Staff', 'Business Manager'],
+    },
+  ];
 
   // Filter items based on current user's role
-  const filteredNavItems = navItems.filter(item => 
+  const filteredNavItems = navItems.filter(item =>
     user && item.roles.includes(user.role)
   );
 
@@ -106,9 +120,8 @@ export function MainLayout() {
                 <Link
                   key={item.href}
                   to={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all hover:text-primary ${
-                    isActive ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"
-                  }`}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all hover:text-primary ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"
+                    }`}
                 >
                   <Icon className="h-5 w-5" />
                   {item.title}
@@ -122,12 +135,12 @@ export function MainLayout() {
       {/* Main Content Area */}
       {/* Thay vì sm:pl-64 cho w-full, ta dùng padding-left để chừa chỗ cho fixed Sidebar */}
       <div className="flex flex-col flex-1 sm:pl-64">
-        
+
         {/* Topbar */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4 sm:h-[60px] sm:px-6">
-          <Button 
-            variant="outline" 
-            size="icon" 
+          <Button
+            variant="outline"
+            size="icon"
             className="sm:hidden"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
@@ -137,7 +150,7 @@ export function MainLayout() {
 
           {/* Spacer đẩy các phần tử sau về bên phải */}
           <div className="flex-1" />
-          
+
           {user && (
             <div className="flex items-center gap-4">
               <div className="hidden md:flex flex-col items-end">
@@ -167,21 +180,20 @@ export function MainLayout() {
               </div>
               <nav className="grid gap-2">
                 {filteredNavItems.map((item) => {
-                   const Icon = item.icon;
-                   const isActive = location.pathname === item.href;
-                   return (
-                     <Link
-                       key={item.href}
-                       to={item.href}
-                       onClick={() => setIsMobileMenuOpen(false)}
-                       className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium ${
-                         isActive ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"
-                       }`}
-                     >
-                       <Icon className="h-5 w-5" />
-                       {item.title}
-                     </Link>
-                   )
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"
+                        }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {item.title}
+                    </Link>
+                  )
                 })}
               </nav>
             </div>

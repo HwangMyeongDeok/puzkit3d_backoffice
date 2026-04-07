@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { useAuthStore } from './store/useAuthStore';
 import { MainLayout } from './components/layout/MainLayout';
+import { StaffPartnerProductRequestsPage } from './pages/staff/StaffPartnerProductRequestsPage';
+import { CatalogPage } from './pages/catalog/CatalogPage';
 
 import { Login } from './pages/auth/Login';
 import { Unauthorized } from './pages/Unauthorized';
@@ -75,16 +77,16 @@ function App() {
             <Route
               path="/partners"
               element={
-                <ProtectedRoute allowedRoles={['Business Manager']}>
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <PartnerApprovals />
                 </ProtectedRoute>
               }
-
             />
+
             <Route
               path="/partner-products"
               element={
-                <ProtectedRoute allowedRoles={["Business Manager"]}>
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <PartnerProductsPage />
                 </ProtectedRoute>
               }
@@ -93,7 +95,7 @@ function App() {
             <Route
               path="/partner-products/new"
               element={
-                <ProtectedRoute allowedRoles={["Business Manager"]}>
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <PartnerProductCreatePage />
                 </ProtectedRoute>
               }
@@ -102,17 +104,33 @@ function App() {
             <Route
               path="/partner-products/:id/edit"
               element={
-                <ProtectedRoute allowedRoles={["Business Manager"]}>
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <PartnerProductEditPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/catalog"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
+                  <CatalogPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/import-service-configs"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
+                  <ImportServiceConfigsPage />
                 </ProtectedRoute>
               }
             />
 
             <Route
-              path="/import-service-configs"
+              path="/partner-product-requests"
               element={
-                <ProtectedRoute allowedRoles={['Business Manager']}>
-                  <ImportServiceConfigsPage />
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
+                  <StaffPartnerProductRequestsPage />
                 </ProtectedRoute>
               }
             />

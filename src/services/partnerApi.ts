@@ -4,11 +4,16 @@ import type {
   UpsertPartnerRequest,
 } from "@/types/types";
 
-export async function getPartners(pageNumber = 1, pageSize = 8) {
+export async function getPartners(
+  pageNumber = 1,
+  pageSize = 8,
+  ascending = true
+) {
   const response = await axiosInstance.get<GetPartnersResponse>("/partners", {
     params: {
       pageNumber,
       pageSize,
+      ascending,
     },
   });
 
