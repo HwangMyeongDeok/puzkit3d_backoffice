@@ -25,11 +25,16 @@ import { PartnerProductEditPage } from "./pages/partner-products/PartnerProductE
 import { ImportServiceConfigsPage } from './pages/ImportServiceConfigsPage';
 import RequestManagement from './pages/requests/RequestManagement';
 import RequirementManagement from './pages/requirement/RequirementManagement';
+import { ProductionTemplatePage } from './pages/production-template/ProductionTemplatePage';
+import QuotationPage from './pages/quotation/QuotationPage';
+import SystemConfigurationsPage from './pages/system-config/SystemConfigurationsPage';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       retry: 1,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
     },
   },
 });
@@ -211,6 +216,15 @@ function App() {
             />
 
             <Route
+              path="/requests/:id/quotation"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', "Business Manager"]}>
+                  <QuotationPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/requirements"
               element={
                 <ProtectedRoute allowedRoles={['Staff', "Business Manager"]}>
@@ -218,6 +232,24 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/production-template"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', "Business Manager"]}>
+                  <ProductionTemplatePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/system-configurations"
+              element={
+                <ProtectedRoute allowedRoles={['Business Manager']}>
+                  <SystemConfigurationsPage />
+                </ProtectedRoute>
+              }
+              />
+            
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

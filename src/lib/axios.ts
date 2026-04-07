@@ -34,14 +34,11 @@ export const removeCookie = (name: string) => {
 // ---------------------------------------------------------------------------
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-/**
- * Các endpoint xác thực — KHÔNG được trigger refresh-token logic.
- * Thêm vào đây nếu có endpoint auth mới.
- */
+// ✅ Fix Bug 3: dùng startsWith thay vì includes để tránh false positive
 const AUTH_ENDPOINTS = ["auth/login", "auth/register", "auth/refresh-token"];
 
 // ---------------------------------------------------------------------------
-// Instance CHÍNH — dùng cho toàn bộ app
+// Instances
 // ---------------------------------------------------------------------------
 export const axiosInstance: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -52,11 +49,6 @@ export const axiosInstance: AxiosInstance = axios.create({
   },
 });
 
-/**
- * Instance RIÊNG để gọi refresh-token.
- * Tách biệt hoàn toàn để tránh interceptor của axiosInstance
- * bắt lại chính request refresh => vòng lặp vô tận => logout sai.
- */
 const refreshAxios = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
@@ -67,16 +59,13 @@ const refreshAxios = axios.create({
 });
 
 // ---------------------------------------------------------------------------
-// Logout helper — gom hết side-effects vào một chỗ
+// ✅ Fix Bug 1: handleLogout KHÔNG xóa refreshToken
+// refreshToken chỉ bị xóa sau khi refresh thất bại thực sự,
+// hoặc khi user logout chủ động qua clearAxiosState().
 // ---------------------------------------------------------------------------
 const handleLogout = () => {
   removeCookie("accessToken");
-  removeCookie("refreshToken");
   useAuthStore.getState().logout();
-  // Để router (React Router / TanStack Router) xử lý redirect thay vì
-  // hard-reload bằng window.location — tránh mất state, tránh flicker.
-  // Nếu project chưa có router listener thì uncomment dòng dưới:
-  // window.location.replace("/login");
 };
 
 // ---------------------------------------------------------------------------
@@ -96,20 +85,17 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
   failedQueue = [];
 };
 
-/**
- * Gọi khi logout chủ động (nút Đăng Xuất).
- * Clear queue để tránh zombie requests sau khi logout.
- */
 export const clearAxiosState = () => {
   isRefreshing = false;
   failedQueue.forEach((p) => p.reject(new Error("Logout interrupted")));
   failedQueue = [];
+  // Khi logout CHỦ ĐỘNG mới xóa cả hai token
   removeCookie("accessToken");
   removeCookie("refreshToken");
 };
 
 // ---------------------------------------------------------------------------
-// Request Interceptor — đính kèm access token vào mọi request
+// Request Interceptor
 // ---------------------------------------------------------------------------
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -123,7 +109,7 @@ axiosInstance.interceptors.request.use(
 );
 
 // ---------------------------------------------------------------------------
-// Response Interceptor — tự động refresh token khi gặp 401
+// Response Interceptor
 // ---------------------------------------------------------------------------
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -134,9 +120,10 @@ axiosInstance.interceptors.response.use(
 
     if (!originalRequest) return Promise.reject(error);
 
-    // ✅ Guard sớm: bỏ qua tất cả auth endpoints và request đã retry rồi
+    // ✅ Fix Bug 3: dùng pathname tách biệt để check endpoint chính xác hơn
+    const requestPath = originalRequest.url?.split("?")[0] ?? "";
     const isAuthEndpoint = AUTH_ENDPOINTS.some((ep) =>
-      originalRequest.url?.includes(ep)
+      requestPath === ep || requestPath.endsWith(`/${ep}`)
     );
 
     if (
@@ -147,7 +134,6 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // --- Nếu đang có request khác đang refresh, thêm vào queue chờ ---
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
@@ -159,14 +145,12 @@ axiosInstance.interceptors.response.use(
         .catch((err) => Promise.reject(err));
     }
 
-    // --- Bắt đầu refresh ---
     originalRequest._retry = true;
     isRefreshing = true;
 
     const refreshToken = getCookie("refreshToken");
 
     if (!refreshToken) {
-      // Không có refresh token → logout luôn, không cần gọi API
       isRefreshing = false;
       processQueue(error, null);
       handleLogout();
@@ -174,16 +158,29 @@ axiosInstance.interceptors.response.use(
     }
 
     try {
-      // ✅ Dùng refreshAxios (instance riêng) — KHÔNG đi qua interceptor chính
       const { data } = await refreshAxios.post("auth/refresh-token", {
         refreshToken,
       });
 
-      const newAccessToken = data.accessToken || data.token;
-      const newRefreshToken = data.refreshToken || data.newRefreshToken;
+      // ✅ Fix Bug 2: log rõ để debug field name backend trả về
+      console.debug("[refresh response]", data);
+
+      // ✅ Mở rộng fallback — cover nhiều naming convention của backend hơn
+      const newAccessToken =
+        data?.accessToken ??
+        data?.token ??
+        data?.data?.accessToken ??
+        data?.data?.token;
+
+      const newRefreshToken =
+        data?.refreshToken ??
+        data?.newRefreshToken ??
+        data?.data?.refreshToken;
 
       if (!newAccessToken) {
-        // Backend trả 200 nhưng không có token → coi như lỗi
+        // Backend trả 200 nhưng không parse được token
+        // → log để biết backend đang trả field gì
+        console.error("[refresh] Unexpected response shape:", data);
         throw new Error("No access token in refresh response");
       }
 
@@ -192,14 +189,13 @@ axiosInstance.interceptors.response.use(
         setCookie("refreshToken", newRefreshToken);
       }
 
-      // Giải phóng queue — tất cả request đang chờ tiếp tục với token mới
       processQueue(null, newAccessToken);
-
       originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
       return axiosInstance(originalRequest);
 
     } catch (refreshErr) {
-      // Refresh thất bại (400 / 401 / 500 / network...) → logout
+      // Chỉ đến đây mới xóa refreshToken (refresh thực sự thất bại)
+      removeCookie("refreshToken");
       processQueue(refreshErr as AxiosError, null);
       handleLogout();
       return Promise.reject(refreshErr);

@@ -10,6 +10,7 @@ import {
   Menu,
   Headset,
   Settings,
+  Layers
   FileText,
   LibraryBig,
 } from 'lucide-react';
@@ -23,81 +24,92 @@ export function MainLayout() {
 
   // Define navigation items with their required roles
   const navItems = [
+    {
+      title: 'Dashboard',
+      href: '/',
+      icon: LayoutDashboard,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Orders',
+      href: '/orders',
+      icon: ShoppingCart,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Instock Products',
+      href: '/instock-products',
+      icon: Package,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Price Management',
+      href: '/price-management',
+      icon: Users,
+      roles: ['Business Manager'],
+    },
+    {
+      title: 'Inventory Management',
+      href: '/inventory-management',
+      icon: Users,
+      roles: ['Business Manager'],
+    },
+    {
+      title: 'Partner Approvals',
+      href: '/partners',
+      icon: Users,
+      roles: ['Business Manager'],
+    },
+    {
+      title: 'Partner Products',
+      href: '/partner-products',
+      icon: Package,
+      roles: ['Business Manager'],
+    },
+    {
+      title: 'Import Service Config',
+      href: '/import-service-configs',
+      icon: Settings,
+      roles: ['Business Manager'],
+    },
+    {
+      title: 'Support Tickets',
+      href: '/support-tickets',
+      icon: Headset,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Feedback Management',
+      href: '/feedback-management',
+      icon: Headset,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Requests',
+      href: '/requests',
+      icon: Headset,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Requirements',
+      href: '/requirements',
+      icon: Headset,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'Production Template',
+      href: '/production-template',
+      icon: Layers,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
+      title: 'System Configurations',
+      href: '/system-configurations',
+      icon: Settings,
+      roles: ['Business Manager'],
+    }
 
-  {
-    title: 'Dashboard',
-    href: '/',
-    icon: LayoutDashboard,
-    roles: ['Staff', 'Business Manager'],
-  },
-  {
-    title: 'Orders',
-    href: '/orders',
-    icon: ShoppingCart,
-    roles: ['Staff', 'Business Manager'],
-  },
-  {
-    title: 'Instock Products',
-    href: '/instock-products',
-    icon: Package,
-    roles: ['Staff', 'Business Manager'],
-  },
-  {
-    title: 'Price Management',
-    href: '/price-management',
-    icon: Users,
-    roles: ['Business Manager'],
-  },
-  {
-    title: 'Inventory Management',
-    href: '/inventory-management',
-    icon: Users,
-    roles: ['Business Manager'],
-  },
-  {
-    title: 'Partner Approvals',
-    href: '/partners',
-    icon: Users,
-    roles: ['Business Manager'],
-  },
-  {
-    title: 'Partner Products',
-    href: '/partner-products',
-    icon: Package,
-    roles: ['Business Manager'],
-  },
-  {
-    title: 'Import Service Config',
-    href: '/import-service-configs',
-    icon: Settings,
-    roles: ['Business Manager'],
-  },
-  {
-    title: 'Support Tickets',
-    href: '/support-tickets',
-    icon: Headset,
-    roles: ['Staff', 'Business Manager'],
-  },
-  {
-    title: 'Feedback Management',
-    href: '/feedback-management',
-    icon: Headset,
-    roles: ['Staff', 'Business Manager'],
-  },
-  {
-    title: 'Requests',
-    href: '/requests',
-    icon: Headset,
-    roles: ['Staff', 'Business Manager'],
-  },
-  {
-    title: 'Requirements',
-    href: '/requirements',
-    icon: Headset,
-    roles: ['Staff', 'Business Manager'],
-  }
-
-];
+  ];
 
   // Filter items based on current user's role
   const filteredNavItems = navItems.filter(item =>

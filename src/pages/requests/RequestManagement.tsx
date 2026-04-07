@@ -3,6 +3,9 @@ import { Search, Filter, Archive, Loader2 } from 'lucide-react';
 import { useGetRequests, useUpdateCustomRequest } from '@/hooks/useCustomDesignRequestQueries';
 import type { CustomDesignRequest } from '@/types/types';
 
+// Import thư viện shadcn
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 // Import từ các file đã tách
 import { formatDate, formatCurrency, getStatusBadge, getTypeBadge } from '@/lib/requestHelpers';
 import { CustomerCell } from '@/components/request/CustomerComponents';
@@ -35,13 +38,9 @@ export default function RequestManagementPage() {
   const filteredData = useMemo(() => {
     if (!responseData?.items) return [];
     
-    const activeStatuses = ['Submitted', 'Processing', 'MissingInformation'];
-    
     return responseData.items.filter(req => {
-      const isReqActive = activeStatuses.includes(req.status);
-      if (activeTab === 'active' && !isReqActive) return false;
-      if (activeTab === 'history' && isReqActive) return false;
-
+      // Đã tháo rào chặn status theo tab ở đây để bảng hiển thị FULL status (kể cả reject, approve)
+      
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchCode = req.code?.toLowerCase().includes(query);
@@ -50,15 +49,15 @@ export default function RequestManagementPage() {
       }
       return true;
     });
-  }, [responseData, activeTab, searchQuery]);
+  }, [responseData, searchQuery]); // Xóa activeTab khỏi dependency vì không dùng để filter bảng nữa
 
   const handleUpdateStatus = (newStatus: string, customNote?: string) => {
-      if (!selectedRequest) return;
+    if (!selectedRequest) return;
     updateRequest(
       {
         ...selectedRequest,
         status: newStatus, 
-       note: customNote || '',
+        note: customNote || '',
         sketches: [] 
       },
       {
@@ -111,30 +110,32 @@ export default function RequestManagementPage() {
           />
         </div>
 
+        {/* Shadcn Select Filter (Đã trả lại logic 4 options theo tab) */}
         <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm flex-1 sm:flex-none">
           <Filter className="w-4 h-4 text-slate-400 ml-2 mr-1 shrink-0" />
-          <select 
-            className="bg-transparent border-none text-sm text-slate-700 py-1 pl-2 pr-6 focus:ring-0 cursor-pointer outline-none font-medium w-full"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="All">All Status</option>
-            {activeTab === 'active' ? (
-              <>
-                <option value="Submitted">Submitted</option>
-                <option value="Processing">Processing</option>
-                <option value="MissingInformation">Missing Information</option>
-              </>
-            ) : (
-              <>
-                <option value="Approved">Approved</option>
-                <option value="Completed">Completed</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Cancelled">Cancelled</option>
-                <option value="Expired">Expired</option>
-              </>
-            )}
-          </select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] border-0 shadow-none focus:ring-0 focus:ring-offset-0 h-8 text-sm font-medium text-slate-700 bg-transparent outline-none">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Status</SelectItem>
+              {activeTab === 'active' ? (
+                <>
+                  <SelectItem value="Submitted">Submitted</SelectItem>
+                  <SelectItem value="Processing">Processing</SelectItem>
+                  <SelectItem value="MissingInformation">Missing Information</SelectItem>
+                </>
+              ) : (
+                <>
+                  <SelectItem value="Approved">Approved</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Rejected">Rejected</SelectItem>
+                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                  <SelectItem value="Expired">Expired</SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
