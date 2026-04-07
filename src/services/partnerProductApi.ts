@@ -9,7 +9,8 @@ export async function getPartnerProducts(
   pageNumber = 1,
   pageSize = 8,
   searchTerm = "",
-  partnerId = ""
+  partnerId = "",
+  ascending = true
 ) {
   const response = await axiosInstance.get<GetPartnerProductsResponse>(
     "/partner-products",
@@ -17,6 +18,7 @@ export async function getPartnerProducts(
       params: {
         pageNumber,
         pageSize,
+        ascending,
         ...(searchTerm ? { searchTerm } : {}),
         ...(partnerId ? { partnerId } : {}),
       },
@@ -27,7 +29,9 @@ export async function getPartnerProducts(
 }
 
 export async function getPartnerProductById(id: string) {
-  const response = await axiosInstance.get<PartnerProductDto>(`/partner-products/${id}`);
+  const response = await axiosInstance.get<PartnerProductDto>(
+    `/partner-products/${id}`
+  );
   return response.data;
 }
 

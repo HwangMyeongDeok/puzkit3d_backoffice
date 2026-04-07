@@ -435,16 +435,25 @@ export type UpsertPartnerRequest = {
   description: string;
 };
 
-export type ImportServiceConfigDto = {
+export interface UpsertImportServiceConfigRequest {
+  baseShippingFee: number;
+  countryCode: string;
+  countryName: string;
+  importTaxPercentage: number;
+  estimatedDeliveryDays: number;
+}
+
+export interface ImportServiceConfigDto {
   id: string;
   baseShippingFee: number;
   countryCode: string;
   countryName: string;
   importTaxPercentage: number;
+  estimatedDeliveryDays: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-};
+}
 
 export type GetImportServiceConfigsResponse = {
   items: ImportServiceConfigDto[];
@@ -456,12 +465,7 @@ export type GetImportServiceConfigsResponse = {
   hasNextPage: boolean;
 };
 
-export type UpsertImportServiceConfigRequest = {
-  baseShippingFee: number;
-  countryCode: string;
-  countryName: string;
-  importTaxPercentage: number;
-};
+
 
 export type PartnerProductDto = {
   id: string;
@@ -584,3 +588,89 @@ export interface User {
   role: string;
   isDeleted: boolean;
 }
+
+export type PartnerProductRequestListItemDto = {
+  id: string;
+  code: string;
+  customerId: string;
+  partnerId: string;
+  totalRequestedQuantity: number;
+  note?: string | null;
+  status: number;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type PartnerProductRequestDetailItemDto = {
+  id: string;
+  partnerProductId: string;
+  quantity: number;
+  referencePrice: number;
+  referenceTotalAmount: number;
+};
+
+export type PartnerProductRequestDetailDto = {
+  id: string;
+  code: string;
+  customerId: string;
+  partnerId: string;
+  totalRequestedQuantity: number;
+  note?: string | null;
+  status: number;
+  createdAt: string;
+  updatedAt: string;
+  details: PartnerProductRequestDetailItemDto[];
+};
+
+export type GetPartnerProductRequestsResponse = {
+  items: PartnerProductRequestListItemDto[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
+export type UpdatePartnerProductRequestStatusRequest = {
+  newStatus: number;
+  note?: string;
+};
+
+export type PartnerQuotationDetailItemDto = {
+  id: string;
+  partnerProductId: string;
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+};
+
+export type PartnerQuotationDto = {
+  id: string;
+  code: string;
+  partnerProductRequestId: string;
+  subTotalAmount: number;
+  shippingFee: number;
+  importTaxAmount: number;
+  grandTotalAmount: number;
+  note?: string | null;
+  status: number;
+  createdAt: string;
+  updatedAt: string;
+  details?: PartnerQuotationDetailItemDto[];
+};
+
+export type CreatePartnerQuotationRequest = {
+  partnerProductRequestId: string;
+  partnerId: string;
+  expectedDeliveryDate: string;
+  items: {
+    partnerProductId: string;
+    customUnitPrice: number;
+  }[];
+};
+
+export type CreatePartnerQuotationResponse = {
+  quotationId: string;
+};
+
