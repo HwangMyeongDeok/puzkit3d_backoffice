@@ -374,7 +374,6 @@ export interface InstockCustomerOrderDto {
   subTotalAmount: number;
   shippingFee: number;
   usedCoinAmount: number;
-  usedCoinAmountAsMoney: number;
   grandTotalAmount: number;
   status: InstockOrderStatus;
   paymentMethod: string;
@@ -391,10 +390,35 @@ export interface UpdateInstockOrderStatusRequestDto {
   newStatus: InstockOrderStatus;
 }
 
+export interface DeliveryTrackingDetailDto {
+  id: string;
+  type: string;
+  itemId: string;
+  quantity: number;
+}
+
 export interface InstockOrderDeliveryTrackingDto {
-  ghnStatus: string;
-  orderStatus: InstockOrderStatus;
-  statusUpdated: boolean;
+  id: string;
+  orderId: string;
+  supportTicketId: string | null;
+  deliveryOrderCode: string | null;
+  status: InstockOrderStatus;
+  type: 'Original' | 'Support';
+  note: string | null;
+  handOverImageUrl: string | null;
+  expectedDeliveryDate: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  details: DeliveryTrackingDetailDto[];
+}
+
+export interface DeliveryTrackingPaginatedResponse {
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  data: InstockOrderDeliveryTrackingDto[];
 }
 export interface CreateDeliveryTrackingDto {
   orderId: string;

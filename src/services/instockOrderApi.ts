@@ -1,9 +1,9 @@
 import { axiosInstance } from '@/lib/axios';
 import type {
+  DeliveryTrackingPaginatedResponse,
   GetCustomerOrdersParams,
   InstockCustomerOrderDto,
   InstockCustomerOrderListItemDto,
-  InstockOrderDeliveryTrackingDto,
   PagedResult,
   UpdateInstockOrderStatusRequestDto,
 } from '@/types/types';
@@ -52,19 +52,19 @@ export const instockOrderApi = {
   //   return response.data;
   // },
 
-  // getDeliveryTracking: async (
-  //   orderId: string,
-  // ): Promise<InstockOrderDeliveryTrackingDto> => {
-  //   const response = await axiosInstance.get<InstockOrderDeliveryTrackingDto>(
-  //     `/instock-orders/${orderId}/delivery-trackings`,
-  //   );
+  getDeliveryTracking: async (
+    orderId: string,
+  ): Promise<DeliveryTrackingPaginatedResponse> => {
+    const response = await axiosInstance.get<DeliveryTrackingPaginatedResponse>(
+      `/delivery-trackings/order/${orderId}`,
+    );
 
-  //   return response.data;
-  // },
+    return response.data;
+  },
 
-    getWaybillUrl: async (orderId: string): Promise<{ waybillUrl: string }> => {
+  getWaybillUrl: async (deliveryTrackingId: string): Promise<{ waybillUrl: string }> => {
     const response = await axiosInstance.get<{ waybillUrl: string }>(
-      `/instock-orders/${orderId}/delivery-tracking/waybill-number`,
+      `/delivery-trackings/${deliveryTrackingId}/waybill-number`,
     );
     return response.data;
   },

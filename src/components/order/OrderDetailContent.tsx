@@ -1,19 +1,18 @@
-import { 
-  ShoppingBag, Truck, MapPin, Phone, CreditCard, Package2 
+import {
+  ShoppingBag, Truck, MapPin, Phone, CreditCard, Package2, ShieldAlert
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { type InstockCustomerOrderDto } from '@/types/types';
 
-// Import từ thư mục hiện tại
-import { GHN_STATUS_MAP } from './constants';
+// Types
+import { type InstockCustomerOrderDto } from '@/types/types';
+import { type InstockOrderDeliveryTrackingDto } from '@/types/types';
+
+// Utils (Nhớ import đúng đường dẫn của bạn)
 import { formatCurrency, formatDateTime } from './utils';
 import { PrintWaybillButton } from './PrintWaybillButton';
-import { DeliveryTrackingSection } from './DeliveryTrackingSection';
-import { ShippingTimeline, type TrackingLog } from './ShippingTimeline';
 
-// InfoRow dùng nội bộ trong file này
 const InfoRow = ({ label, value }: { label: string; value: string | React.ReactNode }) => (
   <div className="flex items-start justify-between gap-4 text-sm">
     <span className="text-muted-foreground">{label}</span>
@@ -25,23 +24,18 @@ const InfoRow = ({ label, value }: { label: string; value: string | React.ReactN
 
 export function OrderDetailContent({
   order,
-  ghnStatus,
-  statusUpdated,
-  trackingLogs,
+  deliveries,
 }: {
   order: InstockCustomerOrderDto;
-  ghnStatus?: string;
-  statusUpdated: boolean;
-  trackingLogs?: TrackingLog[];
+  deliveries: InstockOrderDeliveryTrackingDto[];
 }) {
   const fullAddress = [order.detailAddress, order.customerWardName, order.customerDistrictName, order.customerProvinceName]
     .filter(Boolean)
     .join(', ');
 
-  const hasDeliveryCode = !!order.deliveryOrderCode;
-
   return (
     <div className="space-y-5">
+      {/* Khối Order Summary & Customer Info */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
@@ -51,9 +45,7 @@ export function OrderDetailContent({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <InfoRow label="Status" value={order.status} />
-            <InfoRow label="GHN Status" value={ghnStatus ? (GHN_STATUS_MAP[ghnStatus]?.label ?? ghnStatus) : '—'} />
-            <InfoRow label="Status Synced" value={statusUpdated ? 'Yes' : 'No'} />
+            <InfoRow label="Status" value={<Badge variant="outline">{order.status}</Badge>} />
             <InfoRow label="Payment Method" value={order.paymentMethod} />
             <InfoRow label="Paid" value={order.isPaid ? 'Yes' : 'No'} />
             <InfoRow label="Created At" value={formatDateTime(order.createdAt)} />
@@ -64,81 +56,94 @@ export function OrderDetailContent({
 
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Truck className="h-4 w-4" />
-                Delivery
-              </CardTitle>
-              {hasDeliveryCode && <PrintWaybillButton orderId={order.id} />}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <InfoRow label="Delivery Code" value={order.deliveryOrderCode} />
-            <InfoRow label="Expected Date" value={formatDateTime(order.expectedDeliveryDate)} />
-            <InfoRow label="Address" value={fullAddress || '—'} />
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Truck className="h-4 w-4" />
-            Delivery Tracking
-          </CardTitle>
-          <CardDescription>Real-time delivery tracking records for this order.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DeliveryTrackingSection orderId={order.id} orderStatus={order.status} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <MapPin className="h-4 w-4" />
-            Shipping Timeline
-          </CardTitle>
-          <CardDescription>Live tracking events from GHN.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ShippingTimeline logs={trackingLogs} currentGhnStatus={ghnStatus} />
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Phone className="h-4 w-4" />
-              Customer
+              Customer & Shipping Address
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <InfoRow label="Name" value={order.customerName} />
             <InfoRow label="Phone" value={order.customerPhone} />
             <InfoRow label="Email" value={order.customerEmail} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CreditCard className="h-4 w-4" />
-              Payment Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <InfoRow label="Subtotal" value={formatCurrency(order.subTotalAmount)} />
-            <InfoRow label="Shipping Fee" value={formatCurrency(order.shippingFee)} />
-            <InfoRow label="Used Coin" value={order.usedCoinAmount.toLocaleString('vi-VN')} />
-            <InfoRow label="Coin Discount" value={formatCurrency(order.usedCoinAmountAsMoney || 0)} />
-            <Separator />
-            <InfoRow label="Grand Total" value={formatCurrency(order.grandTotalAmount)} />
+            <Separator className="my-2" />
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground">Address</span>
+              <p className="text-sm font-medium">{fullAddress || '—'}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Danh sách các gói hàng (Deliveries) */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Truck className="h-5 w-5" /> Delivery Shipments
+        </h3>
+
+        {deliveries.length === 0 ? (
+          <Card className="bg-muted/20 border-dashed">
+            <CardContent className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+              <Truck className="h-8 w-8 opacity-20 mb-2" />
+              <p className="text-sm">No shipments created for this order yet.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {deliveries.map((delivery) => (
+              <Card key={delivery.id} className={delivery.type === 'Support' ? 'border-amber-200 bg-amber-50/10' : ''}>
+
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1.5">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        {delivery.type === 'Support' ? <ShieldAlert className="h-4 w-4 text-amber-600" /> : <Package2 className="h-4 w-4 text-blue-600" />}
+                        {delivery.type} Package
+                      </CardTitle>
+                      <Badge className={delivery.status === 'Delivered' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'}>
+                        {delivery.status}
+                      </Badge>
+                    </div>
+
+                    {/* 👇 ĐẶT NÚT IN VẬN ĐƠN Ở ĐÂY, CHUYỀN ID CỦA DELIVERY VÀO 👇 */}
+                    {delivery.deliveryOrderCode && (
+                      <PrintWaybillButton deliveryTrackingId={delivery.id} />
+                    )}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  {/* ... Các thông tin khác giữ nguyên như cũ ... */}
+                  <InfoRow label="Tracking Code" value={<span className="font-mono font-bold">{delivery.deliveryOrderCode || 'Pending Sync'}</span>} />
+                  <InfoRow label="Expected Delivery" value={formatDateTime(delivery.expectedDeliveryDate)} />
+                  {delivery.deliveredAt && (
+                    <InfoRow label="Delivered At" value={formatDateTime(delivery.deliveredAt)} />
+                  )}
+                </CardContent>
+
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Thông tin Thanh toán */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CreditCard className="h-4 w-4" />
+            Payment Breakdown
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <InfoRow label="Subtotal" value={formatCurrency(order.subTotalAmount)} />
+          <InfoRow label="Shipping Fee" value={formatCurrency(order.shippingFee)} />
+          <InfoRow label="Used Coin" value={order.usedCoinAmount.toLocaleString('vi-VN')} />
+          <Separator />
+          <InfoRow label="Grand Total" value={<span className="text-lg font-bold text-emerald-600">{formatCurrency(order.grandTotalAmount)}</span>} />
+        </CardContent>
+      </Card>
+
+      {/* Thông tin Items */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -149,6 +154,7 @@ export function OrderDetailContent({
         </CardHeader>
         <CardContent className="space-y-4">
           {order.orderDetails.map((detail) => (
+            // Form map items ở đây giữ nguyên không cần thay đổi
             <div key={detail.id} className="rounded-lg border p-4">
               <div className="flex gap-4">
                 {detail.thumbnailUrl ? (
@@ -170,17 +176,6 @@ export function OrderDetailContent({
                     <InfoRow label="Quantity" value={detail.quantity.toString()} />
                     <InfoRow label="Unit Price" value={formatCurrency(detail.unitPrice)} />
                     <InfoRow label="Total" value={formatCurrency(detail.totalAmount)} />
-                    <InfoRow label="Size" value={`${detail.variantDetails.assembledLengthMm} x ${detail.variantDetails.assembledWidthMm} x ${detail.variantDetails.assembledHeightMm} mm`} />
-                  </div>
-                  <div className="rounded-md bg-muted/40 p-3 text-sm">
-                    <p className="font-medium">{detail.productDetails.name}</p>
-                    <p className="mt-1 text-muted-foreground">{detail.productDetails.description || 'No product description.'}</p>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      <span>Code: {detail.productDetails.code}</span>
-                      <span>Level: {detail.productDetails.difficultLevel}</span>
-                      <span>Pieces: {detail.productDetails.totalPieceCount}</span>
-                      <span>Build time: {detail.productDetails.estimatedBuildTime} min</span>
-                    </div>
                   </div>
                 </div>
               </div>

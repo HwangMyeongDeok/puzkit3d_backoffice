@@ -4,16 +4,22 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { instockOrderApi } from '@/services/instockOrderApi';
 
-export function PrintWaybillButton({ orderId }: { orderId: string }) {
+export function PrintWaybillButton({ deliveryTrackingId }: { deliveryTrackingId: string }) {
   const [loading, setLoading] = useState(false);
   
   const handlePrint = async () => {
     setLoading(true);
     try {
-      const response = await instockOrderApi.getWaybillUrl(orderId) as { waybillUrl: string };
-      if (!response?.waybillUrl) throw new Error('No waybill URL returned.');
-      window.open(response.waybillUrl, '_blank', 'noopener,noreferrer');
-      toast.success('Waybill opened in a new tab.');
+      // Gọi API lấy link
+      const response = await instockOrderApi.getWaybillUrl(deliveryTrackingId);
+      
+      const urlToOpen = typeof response === 'string' ? response : (response as any)?.waybillUrl;
+
+      if (!urlToOpen) throw new Error('No waybill URL returned.');
+      
+      // Mở link đó sang một tab mới
+      window.open(urlToOpen, '_blank', 'noopener,noreferrer');
+      
     } catch (err) {
       console.error(err);
       toast.error('Failed to retrieve waybill. Please try again.');
@@ -23,9 +29,9 @@ export function PrintWaybillButton({ orderId }: { orderId: string }) {
   };
   
   return (
-    <Button size="sm" variant="outline" onClick={handlePrint} disabled={loading}>
-      <Printer className="mr-1.5 h-4 w-4" />
-      {loading ? 'Loading...' : 'Print Waybill'}
+    <Button size="sm" variant="outline" onClick={handlePrint} disabled={loading} className="h-7 px-2 text-xs">
+      <Printer className="mr-1.5 h-3.5 w-3.5" />
+      {loading ? 'Opening...' : 'Print Waybill'}
     </Button>
   );
 }

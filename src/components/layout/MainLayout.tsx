@@ -10,9 +10,7 @@ import {
   Menu,
   Headset,
   Settings,
-  Layers
-  FileText,
-  LibraryBig,
+  Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
