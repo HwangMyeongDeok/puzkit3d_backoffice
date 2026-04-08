@@ -116,10 +116,11 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange, onShipmentCre
       </Dialog>
 
       <HandOverDialog 
-        trackingId={handOverDialogTrackingId} 
-        onClose={() => setHandOverDialogTrackingId(null)} 
-        onSuccess={() => refetchDeliveries()}
-      />
+  trackingId={handOverDialogTrackingId} 
+  orderId={ticket?.orderId}    // 👉 Truyền orderId vào đây
+  onClose={() => setHandOverDialogTrackingId(null)} 
+  onSuccess={() => refetchDeliveries()}
+/>
     </>
   );
 }

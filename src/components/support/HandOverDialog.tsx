@@ -5,37 +5,52 @@ import { ImagePlus, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadApi } from '@/services/uploadApi';
 import { useUpdateHandOverImage } from '@/hooks/useDeliveryQueries';
+import { useUpdateInstockOrderStatus } from '@/hooks/useInstockOrderQueries'; // 👉 IMPORT HOOK ĐỔI STATUS ĐƠN HÀNG
 
 interface HandOverDialogProps {
   trackingId: string | null;
+  orderId: string | null; // 👉 Thêm orderId vào đây
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function HandOverDialog({ trackingId, onClose, onSuccess }: HandOverDialogProps) {
+export function HandOverDialog({ trackingId, orderId, onClose, onSuccess }: HandOverDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Hooks
   const { mutateAsync: updateHandOverImage } = useUpdateHandOverImage();
+  const { mutateAsync: updateOrderStatus } = useUpdateInstockOrderStatus(); // 👉 Khởi tạo hook
 
   const handleConfirm = async () => {
+    // Check an toàn
     if (!trackingId || !file) return;
     
     setIsSubmitting(true);
     try {
+      // 1. Upload ảnh lên S3
       const customPath = `hand-overs/${trackingId}-${Date.now()}`;
       const imageUrl = await uploadApi.uploadFileToS3(file, 'deliveries', customPath);
       
+      // 2. Cập nhật ảnh vào Tracking Delivery
       await updateHandOverImage({ id: trackingId, imageUrl });
       
-      toast.success("Hand over image uploaded successfully!");
-      onSuccess();
-      handleClose();
+      // 3. Đổi status của Order sang "HandedOverToDelivery" (NẾU CÓ orderId)
+      if (orderId) {
+        await updateOrderStatus({ 
+          orderId: orderId, 
+         data: { newStatus: 'HandedOverToDelivery' }
+        });
+      }
+      
+      toast.success("Package handed over successfully!");
+      onSuccess(); // Chạy hàm refresh data (đã truyền từ cha vào)
+      handleClose(); // Đóng modal
     } catch (err) {
       console.error(err);
-      toast.error('Failed to upload hand over image');
+      toast.error('Failed to hand over package. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

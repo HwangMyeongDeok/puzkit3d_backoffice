@@ -36,6 +36,7 @@ export const configService = {
     const { data } = await axiosInstance.get<PaymentConfig>('/configs/payment');
     return data;
   },
+  
   updatePaymentConfig: async (payload: PaymentConfig) => {
     const { data } = await axiosInstance.put('/configs/payment', payload);
     return data;
