@@ -1,7 +1,6 @@
-import { axiosInstance } from "@/lib/axios";
-import type { CreateDeliveryTrackingDto } from "@/types/types";
+import { axiosInstance } from '@/lib/axios';
+import type { CreateDeliveryTrackingDto } from '@/types/types';
 
-// --- TYPES ---
 export interface DeliveryTrackingDetail {
   id: string;
   type: string;
@@ -18,7 +17,7 @@ export interface DeliveryTracking {
   type: string;
   note: string | null;
   handOverImageUrl: string | null;
-  expectedDeliveryDate: string;
+  expectedDeliveryDate: string | null;
   deliveredAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -33,35 +32,54 @@ export interface DeliveryTrackingResponse {
   data: DeliveryTracking[];
 }
 
-// --- API CALL ---
-export const fetchDeliveryTrackings = async (orderId: string): Promise<DeliveryTrackingResponse> => {
-  const { data } = await axiosInstance.get(
-    `/delivery-trackings/order/${orderId}`,{
-    params: { pageNumber: 1, pageSize: 100 }
-}
-  );
-  return data;
+const EMPTY_TRACKING_RESPONSE: DeliveryTrackingResponse = {
+  totalCount: 0,
+  pageNumber: 1,
+  pageSize: 100,
+  totalPages: 0,
+  data: [],
+};
+
+export const fetchDeliveryTrackings = async (
+  orderId: string,
+): Promise<DeliveryTrackingResponse> => {
+  try {
+    const { data } = await axiosInstance.get(`/delivery-trackings/order/${orderId}`, {
+      params: { pageNumber: 1, pageSize: 100 },
+    });
+    return data;
+  } catch (error: any) {
+    const status = error?.response?.status;
+    if (status === 404) {
+      return EMPTY_TRACKING_RESPONSE;
+    }
+    throw error;
+  }
 };
 
 export const getDeliveryTrackingById = async (id: string): Promise<DeliveryTracking> => {
-  const { data } = await axiosInstance.get(
-    `/delivery-trackings/${id}`
-  );
+  const { data } = await axiosInstance.get(`/delivery-trackings/${id}`);
   return data;
 };
 
-export const createDeliveryTracking = async (payload: CreateDeliveryTrackingDto): Promise<DeliveryTracking> => {
-  const { data } = await axiosInstance.post(
-    `/delivery-trackings`,
-    payload
-  );
-  return data;
+export const createDeliveryTracking = async (
+  payload: CreateDeliveryTrackingDto,
+): Promise<string> => {
+  const { data } = await axiosInstance.post(`/delivery-trackings`, payload);
+  if (typeof data === 'string') return data;
+  return data?.id || data?.deliveryTrackingId || '';
 };
 
-export const updateHandOverImage = async ({ id, imageUrl }: { id: string; imageUrl: string }): Promise<DeliveryTracking> => {
+export const updateHandOverImage = async ({
+  id,
+  imageUrl,
+}: {
+  id: string;
+  imageUrl: string;
+}): Promise<DeliveryTracking> => {
   const { data } = await axiosInstance.put(
     `/delivery-trackings/${id}/hand-over-image`,
-    { imageUrl }
+    { imageUrl },
   );
   return data;
 };
