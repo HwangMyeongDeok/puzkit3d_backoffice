@@ -28,6 +28,9 @@ import RequirementManagement from './pages/requirement/RequirementManagement';
 import { ProductionTemplatePage } from './pages/production-template/ProductionTemplatePage';
 import QuotationPage from './pages/quotation/QuotationPage';
 import SystemConfigurationsPage from './pages/system-config/SystemConfigurationsPage';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -48,6 +51,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ReactQueryDevtools initialIsOpen={false} buttonPosition="top-right" />
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}

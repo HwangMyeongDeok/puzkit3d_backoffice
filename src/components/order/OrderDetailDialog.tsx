@@ -1,12 +1,11 @@
-import { useEffect } from 'react';
 import { Receipt } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCustomerOrderById, useInstockOrderDeliveryTracking } from '@/hooks/useInstockOrderQueries';
 
 import { OrderDetailContent } from './OrderDetailContent';
+import type { InstockOrderDeliveryTrackingDto } from '@/types/types';
 
 function OrderDetailSkeleton() {
   return (
@@ -29,22 +28,11 @@ export function OrderDetailDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const queryClient = useQueryClient();
   const { data: order, isLoading, error } = useCustomerOrderById(orderId);
-  const { data: deliveryTracking } = useInstockOrderDeliveryTracking(orderId, open && !!orderId);
-
-  const displayOrder =
-    order && deliveryTracking?.statusUpdated
-      ? { ...order, status: deliveryTracking.orderStatus }
-      : order;
-
-  useEffect(() => {
-    if (open && orderId && deliveryTracking?.statusUpdated) {
-      queryClient.invalidateQueries({ queryKey: ['instock-orders', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['instock-orders', 'detail', orderId] });
-    }
-  }, [deliveryTracking?.statusUpdated, open, orderId, queryClient]);
-
+  
+  const { data: deliveriesRes} = useInstockOrderDeliveryTracking(orderId, open && !!orderId);
+  const deliveries = (deliveriesRes?.data as InstockOrderDeliveryTrackingDto[]) || [];
+  console.log(deliveries);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[90vh] max-h-[90vh] w-full max-w-4xl flex-col gap-0 p-0">
@@ -54,7 +42,7 @@ export function OrderDetailDialog({
             {order ? `Order ${order.code}` : 'Order Details'}
           </DialogTitle>
           <DialogDescription>
-            View order info, delivery tracking, and individual items.
+            View order info, delivery trackings, and individual items.
           </DialogDescription>
         </DialogHeader>
 
@@ -66,12 +54,10 @@ export function OrderDetailDialog({
               <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
                 Failed to load order details. Please try again.
               </div>
-            ) : displayOrder ? (
+            ) : order ? (
               <OrderDetailContent
-                order={displayOrder}
-                ghnStatus={deliveryTracking?.ghnStatus}
-                statusUpdated={deliveryTracking?.statusUpdated ?? false}
-                trackingLogs={deliveryTracking?.logs}
+                order={order}
+                deliveries={deliveries}
               />
             ) : null}
           </div>
