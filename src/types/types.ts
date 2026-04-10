@@ -284,14 +284,17 @@ export interface UpdatePartnerProductVariantRequestDto {
 export type InstockOrderStatus =
   | 'Pending'
   | 'Paid'
-    | 'Waiting'
-    |'PickedUp'
-  |'Delivering'
-  |'Delivered'
+  | 'Waiting'
+  | 'PickedUp'
+  | 'Delivering'
+  | 'Delivered'
   | 'Processing'
-    | 'HandedOverToDelivery'
-      | 'Completed'
+  | 'HandedOverToDelivery'
+  | 'ReadyToPick'
+  | 'Shipping'
+  | 'Completed'
   | 'Cancelled'
+  | 'Rejected'
   | 'Returned'
   | 'Expired';
 

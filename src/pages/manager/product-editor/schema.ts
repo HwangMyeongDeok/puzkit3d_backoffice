@@ -27,6 +27,7 @@ export const variantFormSchema = z.object({
   assembledWidthMm: z.coerce.number().min(0, 'Width must be positive'),
   assembledHeightMm: z.coerce.number().min(0, 'Height must be positive'),
   isActive: z.boolean(),
+  initialStock: z.coerce.number().min(0, 'Stock cannot be negative').default(0),
 });
 
 export type VariantFormValues = z.infer<typeof variantFormSchema>;
@@ -38,5 +39,9 @@ export const priceDetailFormSchema = z.object({
   currency: z.enum(['USD', 'VND', 'EUR']),
   isActive: z.boolean(),
 });
+export const masterProductSchema = productFormSchema.extend({
+  variants: z.array(variantFormSchema).default([]), 
+});
 
 export type PriceDetailFormValues = z.infer<typeof priceDetailFormSchema>;
+export type MasterProductFormValues = z.infer<typeof masterProductSchema>;

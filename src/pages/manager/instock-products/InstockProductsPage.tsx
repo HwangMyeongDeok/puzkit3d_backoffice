@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   useInstockProducts,
+  useToggleInstockProductStatus
 } from '@/hooks/useInstockProductQueries';
 
 import {
@@ -28,18 +29,18 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { useToggleInstockProductStatus } from '@/hooks/useInstockProductQueries';
+import { handleErrorToast } from '@/lib/error-handler';
 
 export function InstockProductsPage() {
   const navigate = useNavigate();
 
   // --- States cho Filter & Pagination ---
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchInput, setSearchInput] = useState(''); // Tách riêng input và term để khi enter mới search
+  const [searchInput, setSearchInput] = useState('');
   const [pageNumber, setPageNumber] = useState(1);
   const [isActiveFilter, setIsActiveFilter] = useState<boolean | undefined>(undefined);
 
-  // --- Fetch Data bằng TanStack Query (Đồng bộ với 2 file trước) ---
+  // --- Fetch Data ---
   const { data, isLoading, error } = useInstockProducts({
     pageNumber,
     pageSize: 10,
@@ -48,7 +49,6 @@ export function InstockProductsPage() {
   });
 
   const toggleMutation = useToggleInstockProductStatus();
-  
   const [productToToggle, setProductToToggle] = useState<{ id: string; name: string; isActive: boolean } | null>(null);
 
   // --- Handlers ---
@@ -71,16 +71,15 @@ export function InstockProductsPage() {
     try {
       await toggleMutation.mutateAsync({
         id: productToToggle.id,
-        isActive: productToToggle.isActive,
+        isActive: !productToToggle.isActive, // Note: Chỗ này thường phải gửi status đảo ngược lên
       });
       toast.success(`Product ${productToToggle.isActive ? 'deactivated' : 'activated'} successfully.`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update product status');
+    } catch (error) {
+      handleErrorToast(error, 'Failed to update product status');
     } finally {
       setProductToToggle(null);
     }
   };
-
 
   return (
     <div className="space-y-4 p-4">
@@ -190,7 +189,7 @@ export function InstockProductsPage() {
                       )}
                       <div>
                         <p className="font-medium leading-tight">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">{p.description || 'No description'}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1 max-w-[300px]">{p.description || 'No description'}</p>
                       </div>
                     </div>
                   </TableCell>

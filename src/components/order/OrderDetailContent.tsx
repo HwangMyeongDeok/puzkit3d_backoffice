@@ -188,8 +188,8 @@ export function OrderDetailContent({
                           <MapPin className="h-3.5 w-3.5" /> Proof of Handover:
                         </span>
                         <div className="mt-2 rounded-md border overflow-hidden">
-                          <a href={delivery.handOverImageUrl} target="_blank" rel="noopener noreferrer">
-                            <img src={delivery.handOverImageUrl} alt="Handover" className="w-full max-h-[200px] object-cover transition-opacity hover:opacity-90" />
+                          <a href={delivery.handOverImageUrl!} target="_blank" rel="noopener noreferrer">
+                            <img src={delivery.handOverImageUrl!} alt="Handover" className="w-full max-h-[200px] object-cover transition-opacity hover:opacity-90" />
                           </a>
                         </div>
                       </div>
