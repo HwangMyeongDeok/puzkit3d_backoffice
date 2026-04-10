@@ -5,11 +5,11 @@ import { ImagePlus, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadApi } from '@/services/uploadApi';
 import { useUpdateHandOverImage } from '@/hooks/useDeliveryQueries';
-import { useUpdateInstockOrderStatus } from '@/hooks/useInstockOrderQueries'; // 👉 IMPORT HOOK ĐỔI STATUS ĐƠN HÀNG
+import { useUpdateInstockOrderStatus } from '@/hooks/useInstockOrderQueries';
 
 interface HandOverDialogProps {
   trackingId: string | null;
-  orderId: string | null; // 👉 Thêm orderId vào đây
+  orderId: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }

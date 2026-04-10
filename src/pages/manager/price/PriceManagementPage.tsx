@@ -55,8 +55,6 @@ type PriceFormValues = z.infer<typeof priceSchema>;
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
-const pad = (n: number) => String(n).padStart(2, '0');
-
 /** Build ISO string from a Date + hour + minute */
 function toUtcIso(d: Date, h: number, m: number): string {
   const copy = new Date(d);

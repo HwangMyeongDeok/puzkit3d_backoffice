@@ -70,9 +70,16 @@ export function ProductEditorPage() {
       {/* Content */}
       <div className="max-w-7xl mx-auto py-8">
         {isCreateMode ? (
-          <ProductEditorTabs isCreateMode={true} productId={null} onProductSaved={() => navigate('/instock-products')} />
+          <ProductEditorTabs 
+            isCreateMode={true} 
+            productId={null} 
+          />
         ) : product ? (
-          <ProductEditorTabs isCreateMode={false} productId={id || ''} product={product} onProductSaved={() => navigate('/instock-products')} />
+          <ProductEditorTabs 
+            isCreateMode={false} 
+            productId={id || ''} 
+            product={product} 
+          />
         ) : (
           <div className="space-y-4">
             <Skeleton className="h-12 w-full" />
