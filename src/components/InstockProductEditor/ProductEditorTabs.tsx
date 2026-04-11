@@ -19,16 +19,13 @@ export function ProductEditorTabs({
   productId,
   product,
 }: ProductEditorTabsProps) {
-  // ── State quản lý Tab ──
   const [activeTab, setActiveTab] = useState<'info' | 'variants'>('info');
 
-  // ── State lưu trữ nháp (Draft) cho toàn bộ form BƯỚC 1 ──
   const [productDraftData, setProductDraftData] = useState<Partial<ProductFormValues>>(() => {
     if (!isCreateMode && product) {
       return {
         slug: product.slug,
         name: product.name,
-        // FIX LỖI TYPE Ở ĐÂY: Ép null về undefined hoặc chuỗi rỗng
         description: product.description ?? undefined, 
         difficultLevel: product.difficultLevel as ProductFormValues['difficultLevel'],
         estimatedBuildTime: product.estimatedBuildTime,
@@ -47,20 +44,14 @@ export function ProductEditorTabs({
 
   const [productDraftFiles, setProductDraftFiles] = useState<ProductFiles>({ thumbnail: null, previews: [] });
 
-  // ── State lưu trữ danh sách biến thể (Variant List) BƯỚC 2 ──
   const [wizardVariantsList, setWizardVariantsList] = useState<VariantDraft[]>([]);
 
-  // Điều kiện để cho phép click sang tab variants
   const isInfoCompleted = Object.keys(productDraftData).length > 0 || !isCreateMode;
 
-  // --- CÁC HÀM XỬ LÝ CHUYỂN BƯỚC ---
   const handleInfoNext = (data: ProductFormValues, files: ProductFiles) => {
     setProductDraftData(data);
     setProductDraftFiles(files);
     
-    // Nếu là Edit Mode, bạn có thể cân nhắc gọi API Update Product ở ngay đây thay vì chỉ chuyển tab
-    // ... logic mutate update product ...
-
     setActiveTab('variants');
   };
 

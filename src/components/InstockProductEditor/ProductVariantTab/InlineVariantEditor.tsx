@@ -71,19 +71,17 @@ export function InlineVariantEditor({ mode, variant, onSave, onCancel, isSubmitt
                   </FormItem>
                 )}
               />
-              {mode === 'add-variant' && (
-                <FormField
-                  control={form.control}
-                  name="initialStock"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Initial Stock Quantity</FormLabel>
-                      <FormControl><Input type="number" min="0" placeholder="0" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+              <FormField
+                control={form.control}
+                name="initialStock"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{mode === 'add-variant' ? 'Initial Stock Quantity' : 'Stock Quantity'}</FormLabel>
+                    <FormControl><Input type="number" min="0" placeholder="0" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <Separator />

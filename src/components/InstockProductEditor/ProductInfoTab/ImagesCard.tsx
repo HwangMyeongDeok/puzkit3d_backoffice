@@ -7,13 +7,9 @@ interface ImagesCardProps {
   isCreateMode: boolean;
   thumbnailError: string | null;
   displayThumbnail: string | null;
-  
-  // SỬA Ở 2 DÒNG NÀY: Thêm | null
   thumbnailInputRef: React.RefObject<HTMLInputElement | null>;
   handleThumbnailChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleRemoveThumbnail: () => void;
-  
-  // SỬA Ở DÒNG NÀY: Thêm | null
   previewInputRef: React.RefObject<HTMLInputElement | null>;
   existingPreviews: [string, string][];
   previewLocalPreviews: string[];
@@ -46,7 +42,6 @@ export function ImagesCard({
         <CardTitle>Images</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Thumbnail */}
         <div className="space-y-2">
           <p className="text-sm font-medium">Thumbnail {isCreateMode && <span className="text-destructive">*</span>}</p>
           <input ref={thumbnailInputRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
@@ -66,7 +61,6 @@ export function ImagesCard({
           {thumbnailError && <p className="text-[0.8rem] font-medium text-destructive">{thumbnailError}</p>}
         </div>
 
-        {/* Preview Images */}
         <div className="space-y-2">
           <p className="text-sm font-medium">Preview Images ({totalPreviewCount}/3)</p>
           <input ref={previewInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePreviewFilesChange} />

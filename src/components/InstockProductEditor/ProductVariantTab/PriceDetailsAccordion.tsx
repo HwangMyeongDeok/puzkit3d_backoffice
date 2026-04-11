@@ -53,7 +53,6 @@ import {
 } from '@/hooks/useInstockPriceDetailQueries';
 import { useInstockPrices } from '@/hooks/useInstockPriceQueries';
 
-// ─── Schema ──────────────────────────────────────────────────────
 const priceFormSchema = z.object({
   priceId: z.string().min(1, 'Price campaign is required'),
   unitPrice: z.coerce.number().min(10000, 'Unit price must be at least 10,000'),
@@ -62,7 +61,6 @@ const priceFormSchema = z.object({
 
 type PriceFormValues = z.infer<typeof priceFormSchema>;
 
-// ─── Component ───────────────────────────────────────────────────
 interface PriceDetailsAccordionProps {
   variantId: string;
 }
@@ -72,12 +70,10 @@ export function PriceDetailsAccordion({ variantId }: PriceDetailsAccordionProps)
   const [editingDetail, setEditingDetail] = useState<InstockPriceDetailDto | null>(null);
   const [detailToDeactivate, setDetailToDeactivate] = useState<InstockPriceDetailDto | null>(null);
 
-  // Queries
   const { data: priceDetails, isLoading } = usePriceDetailsByVariantId(variantId);
   const { data: priceOptionsResponse, isLoading: isPriceOptionsLoading, isError: isPriceOptionsError } =
     useInstockPrices({ pageNumber: 1, pageSize: 100 });
 
-  // Mutations
   const createMutation = useCreatePriceDetail();
   const updateMutation = useUpdatePriceDetail();
   const deleteMutation = useDeletePriceDetail();
@@ -85,7 +81,7 @@ export function PriceDetailsAccordion({ variantId }: PriceDetailsAccordionProps)
   const isMutating = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   const form = useForm<PriceFormValues>({
-    resolver: zodResolver(priceFormSchema) as any, // Zod resolver có typing phức tạp, nên tạm thời cast sang any để tránh lỗi TS
+    resolver: zodResolver(priceFormSchema) as any,
     defaultValues: { priceId: '', unitPrice: 0, isActive: true },
   });
 
@@ -146,7 +142,6 @@ export function PriceDetailsAccordion({ variantId }: PriceDetailsAccordionProps)
     }
   };
 
-  // Activate: no confirm needed
   const handleActivate = async (detail: InstockPriceDetailDto) => {
     try {
       await updateMutation.mutateAsync({
@@ -159,7 +154,6 @@ export function PriceDetailsAccordion({ variantId }: PriceDetailsAccordionProps)
     }
   };
 
-  // Deactivate via DELETE endpoint: requires confirm
   const handleConfirmDeactivate = async () => {
     if (!detailToDeactivate) return;
     try {
@@ -182,7 +176,6 @@ export function PriceDetailsAccordion({ variantId }: PriceDetailsAccordionProps)
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="font-semibold">Price Details ({sortedDetails.length})</h3>
@@ -198,7 +191,6 @@ export function PriceDetailsAccordion({ variantId }: PriceDetailsAccordionProps)
         )}
       </div>
 
-      {/* Add / Edit Form */}
       {isAdding && (
         <Card>
           <CardHeader>
@@ -209,7 +201,6 @@ export function PriceDetailsAccordion({ variantId }: PriceDetailsAccordionProps)
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {/* Price Campaign — locked when editing */}
                 <FormField
                   control={form.control}
                   name="priceId"
@@ -301,7 +292,6 @@ export function PriceDetailsAccordion({ variantId }: PriceDetailsAccordionProps)
         </Card>
       )}
 
-      {/* Table */}
       {sortedDetails.length > 0 ? (
         <Card>
           <CardContent className="p-0">
@@ -381,7 +371,6 @@ export function PriceDetailsAccordion({ variantId }: PriceDetailsAccordionProps)
         </div>
       ) : null}
 
-      {/* Deactivate Confirm Dialog */}
       <AlertDialog
         open={!!detailToDeactivate}
         onOpenChange={(open) => !open && setDetailToDeactivate(null)}

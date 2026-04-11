@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Import hàng thật từ project
 import { useInstockProducts } from "@/hooks/useInstockProductQueries";
 import { ProductRow } from "@/components/inventory/ProductRow";
 import { Pagination } from "@/components/inventory/Pagination"; 
@@ -31,13 +30,13 @@ export function InventoryManagementPage() {
   const [difficulty, setDifficulty] = useState<string>("all");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-const { data, isLoading } = useInstockProducts({
-  pageNumber: page, 
-  pageSize: PAGE_SIZE,
-  searchTerm: search,
-});
+  const { data, isLoading } = useInstockProducts({
+    pageNumber: page, 
+    pageSize: PAGE_SIZE,
+    searchTerm: search,
+  });
 
-const handleToggle = useCallback((productId: string) => {
+  const handleToggle = useCallback((productId: string) => {
     setExpandedRows((prev) => {
       const next = new Set(prev);
       if (next.has(productId)) {
@@ -52,16 +51,15 @@ const handleToggle = useCallback((productId: string) => {
   return (
     <div className="p-6 space-y-4">
       <header>
-        <h1 className="text-xl font-bold tracking-tight">Quản lý Sản phẩm</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Xem biến thể và tồn kho thực tế</p>
+        <h1 className="text-xl font-bold tracking-tight">Inventory Management</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">View variants and real-time stock</p>
       </header>
 
-      {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Tìm mã hoặc tên..."
+            placeholder="Search SKU or name..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="pl-8 h-8 text-sm"
@@ -71,29 +69,27 @@ const handleToggle = useCallback((productId: string) => {
         <Select value={difficulty} onValueChange={(val) => { setDifficulty(val); setPage(1); }}>
           <SelectTrigger className="h-8 w-[160px] text-sm">
             <SlidersHorizontal className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-            <SelectValue placeholder="Độ khó" />
+            <SelectValue placeholder="Difficulty" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tất cả độ khó</SelectItem>
-            <SelectItem value="Basic">Cơ bản</SelectItem>
-            <SelectItem value="Intermediate">Trung cấp</SelectItem>
-            <SelectItem value="Advanced">Nâng cao</SelectItem>
-            <SelectItem value="Expert">Chuyên gia</SelectItem>
+            <SelectItem value="all">All Difficulties</SelectItem>
+            <SelectItem value="Basic">Basic</SelectItem>
+            <SelectItem value="Intermediate">Intermediate</SelectItem>
+            <SelectItem value="Advanced">Advanced</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Table Section */}
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
               <TableHead className="w-10 pl-4" />
-              <TableHead className="text-xs font-semibold uppercase">Sản phẩm</TableHead>
-              <TableHead className="text-xs font-semibold uppercase text-center">Số mảnh</TableHead>
-              <TableHead className="text-xs font-semibold uppercase text-center">Thời gian lắp</TableHead>
-              <TableHead className="text-xs font-semibold uppercase">Độ khó</TableHead>
-              <TableHead className="text-xs font-semibold uppercase text-right pr-4">Thao tác</TableHead>
+              <TableHead className="text-xs font-semibold uppercase">Product</TableHead>
+              <TableHead className="text-xs font-semibold uppercase text-center">Pieces</TableHead>
+              <TableHead className="text-xs font-semibold uppercase text-center">Assembly Time</TableHead>
+              <TableHead className="text-xs font-semibold uppercase">Difficulty</TableHead>
+              <TableHead className="text-xs font-semibold uppercase text-right pr-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -103,7 +99,7 @@ const handleToggle = useCallback((productId: string) => {
             ) : data?.items?.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
-                  Không tìm thấy sản phẩm nào.
+                  No products found.
                 </TableCell>
               </TableRow>
             ) : (

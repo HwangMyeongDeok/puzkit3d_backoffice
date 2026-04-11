@@ -5,52 +5,50 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ExpandedVariantTable } from "@/components/inventory/Expandedvarianttable";
-// Import type chuẩn từ project của ông
 import type { InstockProductDto } from "@/types/types";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
-// Giả sử Type độ khó của ông giống như này
 export type DifficultyLevel = "Basic" | "Intermediate" | "Advanced" | "Expert";
 
 interface ProductRowProps {
   product: InstockProductDto;
   isExpanded: boolean;
   onToggle: (id: string) => void;
-  onEdit?: (product: InstockProductDto) => void; // Có thể để option
-  onDelete?: (product: InstockProductDto) => void; // Có thể để option
+  onEdit?: (product: InstockProductDto) => void;
+  onDelete?: (product: InstockProductDto) => void;
 }
 
 // ─── INTERNAL HELPERS ───────────────────────────────────────────────────────
 
 const difficultyConfig: Record<DifficultyLevel, { label: string; className: string }> = {
   Basic: {
-    label: "Cơ bản",
+    label: "Basic",
     className: "border-sky-500/40 bg-sky-500/10 text-sky-600 dark:text-sky-400",
   },
   Intermediate: {
-    label: "Trung cấp",
+    label: "Intermediate",
     className: "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400",
   },
   Advanced: {
-    label: "Nâng cao",
+    label: "Advanced",
     className: "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
   },
   Expert: {
-    label: "Chuyên gia",
+    label: "Expert",
     className: "border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400",
   },
 };
 
 const formatBuildTime = (minutes: number) => {
-  if (minutes < 60) return `${minutes} phút`;
+  if (minutes < 60) return `${minutes} mins`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return m > 0 ? `${h}g ${m}p` : `${h} giờ`;
+  return m > 0 ? `${h}h ${m}m` : `${h} hrs`;
 };
 
 function DifficultyBadge({ level }: { level: DifficultyLevel }) {
-  // Lấy config dựa trên level, nếu không tìm thấy thì dùng default
+  // Fallback to default if level is missing or doesn't match config
   const config = difficultyConfig[level] || {
     label: level,
     className: "border-muted-foreground/30 text-muted-foreground",
@@ -62,7 +60,6 @@ function DifficultyBadge({ level }: { level: DifficultyLevel }) {
     </Badge>
   );
 }
-
 
 export function ProductRow({ product, isExpanded, onToggle, onEdit, onDelete }: ProductRowProps) {
   return (
@@ -80,14 +77,14 @@ export function ProductRow({ product, isExpanded, onToggle, onEdit, onDelete }: 
               e.stopPropagation();
               onToggle(product.id);
             }}
-            aria-label={isExpanded ? "Thu gọn biến thể" : "Mở rộng biến thể"}
+            aria-label={isExpanded ? "Collapse variants" : "Expand variants"}
             aria-expanded={isExpanded}
           >
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
         </TableCell>
 
-        {/* 2. Sản phẩm (Thumbnail + Tên + Mã) */}
+        {/* Product Info (Thumbnail + Name + Code) */}
         <TableCell className="py-2.5">
           <div className="flex items-center gap-3">
             {product.thumbnailUrl ? (
@@ -97,7 +94,7 @@ export function ProductRow({ product, isExpanded, onToggle, onEdit, onDelete }: 
                 className="h-9 w-9 rounded-md object-cover border border-border/50 flex-shrink-0"
               />
             ) : (
-              // Placeholder nếu không có ảnh
+              // Placeholder if no image is available
               <div className="h-9 w-9 rounded-md bg-muted flex-shrink-0 border border-dashed border-muted-foreground/20" />
             )}
             <div className="min-w-0">
@@ -109,17 +106,17 @@ export function ProductRow({ product, isExpanded, onToggle, onEdit, onDelete }: 
           </div>
         </TableCell>
 
-        {/* 3. Số mảnh */}
+        {/* Piece Count */}
         <TableCell className="py-2.5 text-center">
           <div className="flex items-center justify-center gap-1.5 text-sm text-foreground">
             <Layers className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="tabular-nums">
-              {product.totalPieceCount.toLocaleString("vi-VN")}
+              {product.totalPieceCount.toLocaleString("en-US")}
             </span>
           </div>
         </TableCell>
 
-        {/* 4. Thời gian lắp ráp */}
+        {/* Build Time */}
         <TableCell className="py-2.5 text-center">
           <div className="flex items-center justify-center gap-1.5 text-sm text-foreground">
             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
@@ -127,25 +124,23 @@ export function ProductRow({ product, isExpanded, onToggle, onEdit, onDelete }: 
           </div>
         </TableCell>
 
-        {/* 5. Độ khó */}
+        {/* Difficulty */}
         <TableCell className="py-2.5">
-          {/* Dùng component DifficultyBadge định nghĩa ngay phía trên */}
           <DifficultyBadge level={product.difficultLevel as DifficultyLevel} />
         </TableCell>
 
-        {/* 6. Thao tác */}
+        {/* Actions */}
         <TableCell className="py-2.5 text-right pr-4">
           <div
             className="flex items-center justify-end gap-1"
-            // Ngăn click lan ra TableRow cha
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} // Prevent triggering row expansion
           >
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={() => onEdit?.(product)}
-              aria-label="Chỉnh sửa sản phẩm"
+              aria-label="Edit product"
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
@@ -154,7 +149,7 @@ export function ProductRow({ product, isExpanded, onToggle, onEdit, onDelete }: 
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               onClick={() => onDelete?.(product)}
-              aria-label="Xóa sản phẩm"
+              aria-label="Delete product"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -162,15 +157,13 @@ export function ProductRow({ product, isExpanded, onToggle, onEdit, onDelete }: 
         </TableCell>
       </TableRow>
 
-      {/* ── HIỆN BẢNG CON KHI CLICK (Dòng mở rộng) ── */}
+      {/* EXPANDED ROW */}
       {isExpanded && (
         <TableRow className="hover:bg-transparent bg-muted/10">
           <TableCell
-            // colSpan=6 vì bảng cha có đúng 6 cột
-            colSpan={6}
+            colSpan={6} // colSpan=6 because the parent table has exactly 6 columns
             className="p-0 border-b border-border/50"
           >
-            {/* Nhúng component bảng con của ông vào đây */}
             <ExpandedVariantTable productId={product.id} />
           </TableCell>
         </TableRow>

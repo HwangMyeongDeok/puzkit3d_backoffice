@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { Boxes, Layers3, Package, Shapes, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Shadcn UI Components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,7 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
-// Hooks & Utils
 import {
   useTopics, useCreateTopic, useUpdateTopic, useDeleteTopic,
   useMaterials, useCreateMaterial, useUpdateMaterial, useDeleteMaterial,
@@ -36,30 +34,24 @@ const CATALOG_TABS = [
 const INITIAL_FORM_STATE = { name: '', slug: '', description: '', isActive: true, parentId: '' };
 
 export default function CatalogPage() {
-  // ─── LOCAL STATES ───
   const [activeTab, setActiveTab] = useState<TabKey>('assembly-methods');
   
-  // Dialog (Form) State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
 
-  // AlertDialog (Delete) State
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // ─── QUERIES ───
   const topicsQuery = useTopics();
   const materialsQuery = useMaterials();
   const capabilitiesQuery = useCapabilities();
   const assemblyMethodsQuery = useAssemblyMethods();
 
-  // ─── MUTATIONS ───
   const topicMutations = { create: useCreateTopic(), update: useUpdateTopic(), remove: useDeleteTopic() };
   const materialMutations = { create: useCreateMaterial(), update: useUpdateMaterial(), remove: useDeleteMaterial() };
   const capabilityMutations = { create: useCreateCapability(), update: useUpdateCapability(), remove: useDeleteCapability() };
   const assemblyMutations = { create: useCreateAssemblyMethod(), update: useUpdateAssemblyMethod(), remove: useDeleteAssemblyMethod() };
 
-  // ─── HELPER: GET CURRENT DATA ───
   const { data: items, isLoading } = useMemo(() => {
     switch (activeTab) {
       case 'topics': return { data: topicsQuery.data, isLoading: topicsQuery.isLoading };
@@ -73,7 +65,6 @@ export default function CatalogPage() {
   const activeTabConfig = CATALOG_TABS.find(t => t.id === activeTab);
   const isEditing = !!editingItem;
 
-  // ─── HANDLERS: FORM ───
   const handleOpenDialog = (item?: any) => {
     if (item) {
       setEditingItem(item);
@@ -129,7 +120,6 @@ export default function CatalogPage() {
     }
   };
 
-  // ─── HANDLERS: DELETE ───
   const handleConfirmDelete = async () => {
     if (!deletingId) return;
     try {
@@ -154,13 +144,11 @@ export default function CatalogPage() {
 
   return (
     <div className="p-8 space-y-6 max-w-[1400px] mx-auto">
-      {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Catalog Management</h1>
         <p className="text-muted-foreground mt-1">Configure and manage master data entities.</p>
       </div>
 
-      {/* TABS CONTROLLER */}
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as TabKey)} className="w-full">
         <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto p-1 bg-muted/50 rounded-xl">
           {CATALOG_TABS.map((tab) => {
@@ -188,7 +176,6 @@ export default function CatalogPage() {
           </Button>
         </div>
 
-        {/* DATA TABLE */}
         <TabsContent value={activeTab} className="mt-4 border rounded-xl bg-card shadow-sm overflow-hidden">
           {isLoading ? (
             <div className="p-6 space-y-4">

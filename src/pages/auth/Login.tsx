@@ -39,7 +39,6 @@ export function Login() {
   const setCredentials = useAuthStore((state) => state.setCredentials);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Lấy đường dẫn cũ nếu user bị đá ra trang login (từ ProtectedRoute)
   const from = location.state?.from?.pathname || '/';
 
   const form = useForm<LoginFormValues>({
@@ -54,22 +53,18 @@ export function Login() {
     try {
       setIsLoading(true);
       
-      // Bước 1: Lấy Token
       const loginResponse = await axiosInstance.post('/auth/login', values);
       const { token, refreshToken } = loginResponse.data;
 
       setCookie('accessToken', token);
       setCookie('refreshToken', refreshToken);
 
-      // Bước 2: Lấy Profile
       const profileResponse = await axiosInstance.get('/profile');
       const user = profileResponse.data;
 
-      // Bước 3: Lưu vào Zustand
       setCredentials(user);
       toast.success('Logged in successfully!');
 
-      // Bước 4: Chuyển hướng về trang gốc (Dashboard) hoặc trang user vừa cố truy cập
       navigate(from, { replace: true });
 
     } catch (error) {

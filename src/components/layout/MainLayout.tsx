@@ -1,5 +1,4 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-// Sửa đường dẫn import cho đúng
 import { useAuthStore } from '@/store/useAuthStore';
 import {
   LayoutDashboard,
@@ -11,8 +10,14 @@ import {
   Headset,
   Settings,
   Layers,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useState } from 'react';
 
 export function MainLayout() {
@@ -20,7 +25,6 @@ export function MainLayout() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Define navigation items with their required roles
   const navItems = [
     {
       title: 'Dashboard',
@@ -30,15 +34,25 @@ export function MainLayout() {
     },
     {
       title: 'Orders',
-      href: '/orders',
       icon: ShoppingCart,
       roles: ['Staff', 'Business Manager'],
-    },
-    {
-      title: 'Instock Products',
-      href: '/instock-products',
-      icon: Package,
-      roles: ['Staff', 'Business Manager'],
+      children: [
+        {
+          title: 'Instock Orders',
+          href: '/orders/instock', 
+          roles: ['Staff', 'Business Manager'],
+        },
+        {
+          title: 'Partner Orders',
+          href: '/orders/partner', 
+          roles: ['Staff', 'Business Manager'],
+        },
+        {
+          title: 'Support Tickets',
+          href: '/support-tickets',
+          roles: ['Staff', 'Business Manager'],
+        },
+      ]
     },
     {
       title: 'Price Management',
@@ -59,22 +73,10 @@ export function MainLayout() {
       roles: ['Business Manager'],
     },
     {
-      title: 'Partner Products',
-      href: '/partner-products',
-      icon: Package,
-      roles: ['Business Manager'],
-    },
-    {
       title: 'Import Service Config',
       href: '/import-service-configs',
       icon: Settings,
       roles: ['Business Manager'],
-    },
-    {
-      title: 'Support Tickets',
-      href: '/support-tickets',
-      icon: Headset,
-      roles: ['Staff', 'Business Manager'],
     },
     {
       title: 'Feedback Management',
@@ -112,13 +114,86 @@ export function MainLayout() {
       icon: Settings,
       roles: ['Business Manager'],
     }
-
   ];
 
-  // Filter items based on current user's role
+  // Lọc navItems dựa trên Role
   const filteredNavItems = navItems.filter(item =>
     user && item.roles.includes(user.role)
   );
+
+  // Hàm helper để render một mảng items (dùng chung cho Desktop & Mobile)
+  const renderNavItems = (onItemClick?: () => void) => {
+    return filteredNavItems.map((item) => {
+      const Icon = item.icon;
+      
+      // Nếu item có menu con, dùng Collapsible của shadcn
+      if (item.children) {
+        const isAnyChildActive = item.children.some(child => location.pathname === child.href);
+
+        return (
+          <Collapsible
+            key={item.title}
+            defaultOpen={isAnyChildActive} // Tự động mở nếu đang ở tab con
+            className="group/collapsible flex flex-col gap-1"
+          >
+            <CollapsibleTrigger asChild>
+              <button
+                className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 transition-all hover:bg-muted/80 hover:text-primary ${
+                  isAnyChildActive ? "text-primary font-semibold" : "text-muted-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {Icon && <Icon className="h-5 w-5" />}
+                  <span className="text-sm font-medium">{item.title}</span>
+                </div>
+                {/* Mũi tên tự xoay nhờ class group-data-[state=open] */}
+                <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+              </button>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent className="flex flex-col gap-1 pl-9 pr-2 mt-1">
+              {item.children.map((child) => {
+                const isChildActive = location.pathname === child.href;
+                return (
+                  <Link
+                    key={child.href}
+                    to={child.href}
+                    onClick={onItemClick}
+                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all hover:text-primary ${
+                      isChildActive
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-50" />
+                    {child.title}
+                  </Link>
+                );
+              })}
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      }
+
+      // Render các item đơn lẻ bình thường
+      const isActive = location.pathname === item.href;
+      return (
+        <Link
+          key={item.href}
+          to={item.href || '#'}
+          onClick={onItemClick}
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all hover:text-primary ${
+            isActive
+              ? "bg-primary/10 text-primary font-semibold"
+              : "text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          {Icon && <Icon className="h-5 w-5" />}
+          <span className="text-sm font-medium">{item.title}</span>
+        </Link>
+      );
+    });
+  };
 
   return (
     <div className="flex min-h-screen w-full bg-muted/40">
@@ -129,29 +204,14 @@ export function MainLayout() {
             <span className="text-lg text-primary">PuzKit3D Admin</span>
           </Link>
         </div>
-        <div className="flex-1 overflow-auto py-4">
-          <nav className="grid items-start px-4 text-sm font-medium gap-2">
-            {filteredNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all hover:text-primary ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"
-                    }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  {item.title}
-                </Link>
-              );
-            })}
+        <div className="flex-1 overflow-y-auto py-4 scrollbar-thin">
+          <nav className="grid items-start px-4 gap-1">
+            {renderNavItems()}
           </nav>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      {/* Thay vì sm:pl-64 cho w-full, ta dùng padding-left để chừa chỗ cho fixed Sidebar */}
       <div className="flex flex-col flex-1 sm:pl-64">
 
         {/* Topbar */}
@@ -166,13 +226,11 @@ export function MainLayout() {
             <span className="sr-only">Toggle Menu</span>
           </Button>
 
-          {/* Spacer đẩy các phần tử sau về bên phải */}
           <div className="flex-1" />
 
           {user && (
             <div className="flex items-center gap-4">
               <div className="hidden md:flex flex-col items-end">
-                {/* Dùng Optional Chaining (?.) cho an toàn */}
                 <span className="text-sm font-semibold">{user?.email || 'User'}</span>
                 <span className="text-xs text-muted-foreground font-medium rounded-full bg-primary/10 px-2 py-0.5 mt-1 capitalize">
                   {user?.role?.toLowerCase() || 'Unknown'}
@@ -188,37 +246,25 @@ export function MainLayout() {
 
         {/* Mobile Sidebar Overlay */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm sm:hidden">
-            <div className="fixed inset-y-0 left-0 w-3/4 max-w-xs border-r bg-background p-6 shadow-lg">
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm sm:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+            <div 
+              className="fixed inset-y-0 left-0 w-3/4 max-w-xs border-r bg-background p-6 shadow-lg overflow-y-auto"
+              onClick={(e) => e.stopPropagation()} 
+            >
               <div className="flex items-center justify-between mb-8">
                 <span className="font-bold text-lg text-primary">PuzKit3D Admin</span>
                 <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
                   <Menu className="h-5 w-5" />
                 </Button>
               </div>
-              <nav className="grid gap-2">
-                {filteredNavItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      to={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"
-                        }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      {item.title}
-                    </Link>
-                  )
-                })}
+              <nav className="grid gap-1">
+                {renderNavItems(() => setIsMobileMenuOpen(false))}
               </nav>
             </div>
           </div>
         )}
 
-        {/* Khung chứa các trang con (Dashboard, Orders, Products...) */}
+        {/* Màn hình hiển thị chính */}
         <main className="flex-1 p-2 sm:p-4 lg:p-6">
           <Outlet />
         </main>

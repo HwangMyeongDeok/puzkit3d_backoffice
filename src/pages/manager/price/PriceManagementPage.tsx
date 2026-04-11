@@ -53,16 +53,12 @@ const priceSchema = z.object({
 
 type PriceFormValues = z.infer<typeof priceSchema>;
 
-// ─── Helpers ─────────────────────────────────────────────────────
-
-/** Build ISO string from a Date + hour + minute */
 function toUtcIso(d: Date, h: number, m: number): string {
   const copy = new Date(d);
   copy.setHours(h, m, 0, 0);
   return copy.toISOString();
 }
 
-/** Parse an ISO/date string into a DateRange-compatible object */
 function parseDateRange(
   fromIso?: string | null,
   toIso?: string | null,
@@ -79,7 +75,6 @@ function parseDateRange(
   };
 }
 
-// ─── Date Range Bar (table cell) ─────────────────────────────────
 
 function DateRangeBar({
   from, to, isActive,
@@ -113,7 +108,6 @@ function DateRangeBar({
   );
 }
 
-// ─── Price Form Dialog ───────────────────────────────────────────
 
 interface PriceFormDialogProps {
   open: boolean;
@@ -172,7 +166,6 @@ function PriceFormDialog({ open, onOpenChange, price }: PriceFormDialogProps) {
           effectiveFrom: toUtcIso(dateRange.from, dateRange.fromHour, dateRange.fromMinute),
           effectiveTo:   toUtcIso(dateRange.to,   dateRange.toHour,   dateRange.toMinute),
         };
-        // ✅ Only send isActive if it actually changed
         if (values.isActive !== price.isActive) payload.isActive = values.isActive;
         await updateMutation.mutateAsync({ id: price.id, data: payload as UpdateInstockPriceRequestDto });
         toast.success('Campaign updated');
@@ -201,7 +194,6 @@ function PriceFormDialog({ open, onOpenChange, price }: PriceFormDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[440px] gap-0 p-0 overflow-hidden">
 
-        {/* Header */}
         <DialogHeader className="px-6 py-5 border-b">
           <DialogTitle className="text-[15px] font-medium">
             {isEdit ? 'Edit campaign' : 'New campaign'}
@@ -213,12 +205,10 @@ function PriceFormDialog({ open, onOpenChange, price }: PriceFormDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Body */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="px-6 py-5 space-y-4">
 
-              {/* Name */}
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs font-medium text-muted-foreground">
@@ -235,7 +225,6 @@ function PriceFormDialog({ open, onOpenChange, price }: PriceFormDialogProps) {
                 </FormItem>
               )} />
 
-              {/* Priority */}
               <FormField control={form.control} name="priority" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs font-medium text-muted-foreground">
@@ -253,7 +242,6 @@ function PriceFormDialog({ open, onOpenChange, price }: PriceFormDialogProps) {
                 </FormItem>
               )} />
 
-              {/* Date range — single picker for both from & to */}
               <FormField control={form.control} name="dateRange" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs font-medium text-muted-foreground">
@@ -264,7 +252,6 @@ function PriceFormDialog({ open, onOpenChange, price }: PriceFormDialogProps) {
                       value={field.value ?? null}
                       onChange={field.onChange}
                       disabled={isPending}
-                      // When creating: disallow past days. When editing: no restriction.
                       minDate={isEdit ? undefined : today}
                     />
                   </FormControl>
@@ -272,7 +259,6 @@ function PriceFormDialog({ open, onOpenChange, price }: PriceFormDialogProps) {
                 </FormItem>
               )} />
 
-              {/* Period preview — shown after range is selected */}
               {watchRange?.from && watchRange?.to && (
                 <div className="rounded-md border bg-muted/40 px-4 py-3">
                   <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
@@ -286,7 +272,6 @@ function PriceFormDialog({ open, onOpenChange, price }: PriceFormDialogProps) {
                 </div>
               )}
 
-              {/* Active status */}
               <FormField control={form.control} name="isActive" render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-md border px-4 py-3">
                   <div className="space-y-0.5">
@@ -309,7 +294,6 @@ function PriceFormDialog({ open, onOpenChange, price }: PriceFormDialogProps) {
 
             </div>
 
-            {/* Footer */}
             <DialogFooter className="px-6 py-4 border-t bg-muted/30 gap-2">
               <Button
                 type="button" variant="outline" size="sm"
@@ -330,7 +314,6 @@ function PriceFormDialog({ open, onOpenChange, price }: PriceFormDialogProps) {
   );
 }
 
-// ─── Main Page ───────────────────────────────────────────────────
 
 export default function PriceManagementPage() {
   const [page,          setPage]          = useState(1);
@@ -372,7 +355,6 @@ export default function PriceManagementPage() {
   return (
     <div className="space-y-5">
 
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-lg font-semibold tracking-tight">Price management</h1>
@@ -386,7 +368,6 @@ export default function PriceManagementPage() {
         </Button>
       </div>
 
-      {/* Filters */}
       <div className="flex gap-2.5 flex-wrap">
         <Input
           placeholder="Search by name…"
@@ -406,7 +387,6 @@ export default function PriceManagementPage() {
         </Select>
       </div>
 
-      {/* Table */}
       {isError ? (
         <p className="text-sm text-destructive">Failed to load campaigns.</p>
       ) : isLoading ? (
@@ -500,7 +480,6 @@ export default function PriceManagementPage() {
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-3">
           <Button variant="outline" size="sm"
@@ -515,14 +494,12 @@ export default function PriceManagementPage() {
         </div>
       )}
 
-      {/* Form dialog */}
       <PriceFormDialog
         open={priceFormOpen}
         onOpenChange={(open) => { setPriceFormOpen(open); if (!open) setEditingPrice(null); }}
         price={editingPrice ?? undefined}
       />
 
-      {/* Toggle confirm */}
       <AlertDialog open={!!priceToToggle} onOpenChange={(open) => !open && setPriceToToggle(null)}>
         <AlertDialogContent className="max-w-[360px]">
           <AlertDialogHeader>

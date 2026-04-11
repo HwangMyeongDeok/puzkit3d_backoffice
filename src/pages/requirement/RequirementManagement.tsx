@@ -27,21 +27,19 @@ const RequirementManagement = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm("Xóa mẫu này có thể ảnh hưởng đến các đơn hàng cũ. Tiếp tục?")) return;
+    if (!confirm("Deleting this template may affect old orders. Continue?")) return;
 
     toast.promise(deleteMutation.mutateAsync(id), {
-      loading: 'Đang xóa...',
-      success: 'Đã gỡ bỏ mẫu thiết kế!',
-      error: 'Không thể xóa mẫu này.',
+      loading: 'Deleting...',
+      success: 'Deleted successfully!',
+      error: 'Failed to delete.',
     });
   };
 
   return (
     <div className="container mx-auto py-10 px-4 space-y-6">
-      {/* 1. Header */}
       <RequirementHeader onAddNew={handleAddNew} />
 
-      {/* 2. Table Section */}
       <RequirementTable 
         requirements={requirements} 
         isLoading={isLoading} 
@@ -49,7 +47,6 @@ const RequirementManagement = () => {
         onDelete={handleDelete} 
       />
 
-      {/* 3. Form Slide-over */}
       <RequirementFormSheet 
         isOpen={isOpen} 
         onOpenChange={setIsOpen} 
