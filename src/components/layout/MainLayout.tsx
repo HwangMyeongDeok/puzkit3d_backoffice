@@ -101,6 +101,12 @@ export function MainLayout() {
       roles: ['Staff', 'Business Manager'],
     },
     {
+      title: 'Catalog Management',
+      href: '/catalog-management',
+      icon: Layers,
+      roles: ['Staff', 'Business Manager'],
+    },
+    {
       title: 'System Configurations',
       href: '/system-configurations',
       icon: Settings,
