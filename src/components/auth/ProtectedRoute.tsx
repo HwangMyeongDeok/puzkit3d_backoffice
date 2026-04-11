@@ -19,7 +19,6 @@ export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) 
   }
 
   if (!isAuthenticated || !user) {
-    // Lưu lại vị trí hiện tại để login xong quay lại đây
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -27,6 +26,5 @@ export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) 
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Hỗ trợ cả bọc children HOẶC dùng Outlet cho react-router-dom v6/v7
   return children ? <>{children}</> : <Outlet />;
 }

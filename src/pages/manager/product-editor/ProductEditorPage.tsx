@@ -10,7 +10,6 @@ export function ProductEditorPage() {
   const navigate = useNavigate();
   const isCreateMode = !id || id === 'new';
 
-  // Fetch product data only if editing (not creating)
   const {
     data: product,
     isLoading: isProductLoading,
@@ -43,7 +42,6 @@ export function ProductEditorPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <div className="border-b bg-card sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-4">
           <Button
@@ -67,7 +65,6 @@ export function ProductEditorPage() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-7xl mx-auto py-8">
         {isCreateMode ? (
           <ProductEditorTabs 

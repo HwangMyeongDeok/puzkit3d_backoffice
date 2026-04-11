@@ -28,15 +28,12 @@ import {
   useUpdateInventory,
 } from "@/hooks/useInventoryMutations";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface InventoryDialogVariant {
   id: string;
   sku: string;
   color: string;
-  /** undefined = chưa fetch / chưa có inventory (404) */
   stockQuantity: number | undefined;
-  /** true nếu GET inventory trả 404 — chưa tạo lần nào */
   hasNoInventory: boolean;
 }
 
@@ -46,8 +43,6 @@ interface EditInventoryDialogProps {
   productId: string;
   variant: InventoryDialogVariant | null;
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export function EditInventoryDialog({
   open,
@@ -62,7 +57,7 @@ const [quantity, setQuantity] = useState<string>(
   );  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const createMutation = useCreateInventory(productId);
+  const createMutation = useCreateInventory();
   const updateMutation = useUpdateInventory(productId);
   const resetMutation = useResetInventory(productId);
 
@@ -70,22 +65,19 @@ const [quantity, setQuantity] = useState<string>(
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const isResetting = resetMutation.isPending;
 
-  // Sync input với giá trị hiện tại khi mở dialog
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 80);
     }
   }, [open]);
 
-  // Đóng và reset state
   const handleClose = () => {
-    if (isSaving || isResetting) return; // ngăn đóng khi đang call API
+    if (isSaving || isResetting) return;
     onOpenChange(false);
     setShowResetConfirm(false);
     setQuantity("");
   };
 
-  // ── Save: smart POST vs PUT ──────────────────────────────────────────────────
   const handleSave = async () => {
     if (!variant) return;
 
@@ -93,9 +85,9 @@ const [quantity, setQuantity] = useState<string>(
     if (isNaN(parsed) || parsed < 0) return;
 
     if (isCreating) {
-      // Thử POST, nếu 409 (race condition — ai đó tạo trước) fallback sang PUT
       try {
         await createMutation.mutateAsync({
+          productId: productId,
           variantId: variant.id,
           quantity: parsed,
         });
@@ -104,14 +96,12 @@ const [quantity, setQuantity] = useState<string>(
         const status = (err as { response?: { status?: number } })?.response
           ?.status;
         if (status === 409) {
-          // Inventory đã tồn tại — fallback PUT
           await updateMutation.mutateAsync({
             variantId: variant.id,
             quantity: parsed,
           });
           handleClose();
         }
-        // Các lỗi khác đã được toast trong hook, không cần xử lý thêm
       }
     } else {
       await updateMutation.mutateAsync({
@@ -122,7 +112,6 @@ const [quantity, setQuantity] = useState<string>(
     }
   };
 
-  // ── Reset về 0 ───────────────────────────────────────────────────────────────
   const handleReset = async () => {
     if (!variant) return;
     await resetMutation.mutateAsync({ variantId: variant.id });
@@ -130,7 +119,6 @@ const [quantity, setQuantity] = useState<string>(
     handleClose();
   };
 
-  // ── Validation ────────────────────────────────────────────────────────────────
   const parsed = parseInt(quantity, 10);
   const isInvalid = quantity !== "" && (isNaN(parsed) || parsed < 0);
   const isEmpty = quantity.trim() === "";
@@ -144,7 +132,6 @@ const [quantity, setQuantity] = useState<string>(
 
   return (
     <>
-      {/* ── Main Dialog ── */}
       <Dialog open={open && !showResetConfirm} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
@@ -152,12 +139,12 @@ const [quantity, setQuantity] = useState<string>(
               {isCreating ? (
                 <>
                   <PackagePlus className="h-4 w-4 text-primary" />
-                  Tạo tồn kho
+                  Create Inventory
                 </>
               ) : (
                 <>
                   <Save className="h-4 w-4 text-primary" />
-                  Cập nhật tồn kho
+                  Update Inventory
                 </>
               )}
             </DialogTitle>
@@ -176,7 +163,7 @@ const [quantity, setQuantity] = useState<string>(
                     variant="outline"
                     className="ml-auto border-amber-500/40 bg-amber-500/10 text-amber-600 text-xs"
                   >
-                    Chưa có inventory
+                    No Inventory
                   </Badge>
                 )}
               </div>
@@ -186,7 +173,7 @@ const [quantity, setQuantity] = useState<string>(
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label htmlFor="quantity" className="text-sm">
-                Số lượng tồn kho
+                Stock Quantity
               </Label>
               <Input
                 id="quantity"
@@ -207,21 +194,20 @@ const [quantity, setQuantity] = useState<string>(
               />
               {isInvalid && (
                 <p className="text-xs text-destructive">
-                  Số lượng phải là số nguyên không âm.
+                  Quantity must be a non-negative integer.
                 </p>
               )}
               {isUnchanged && (
                 <p className="text-xs text-muted-foreground">
-                  Số lượng chưa thay đổi.
+                  Quantity has not changed.
                 </p>
               )}
             </div>
 
-            {/* Hiển thị tồn kho hiện tại nếu đang cập nhật */}
             {!isCreating && variant.stockQuantity !== undefined && (
               <div className="rounded-md border border-border/50 bg-muted/40 px-3 py-2 flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">
-                  Tồn kho hiện tại
+                  Current Stock
                 </span>
                 <span
                   className={`text-sm font-semibold tabular-nums ${
@@ -237,7 +223,6 @@ const [quantity, setQuantity] = useState<string>(
           </div>
 
           <DialogFooter className="flex items-center gap-2 sm:justify-between">
-            {/* Reset button — chỉ hiện khi đang update và tồn kho > 0 */}
             {!isCreating && (variant.stockQuantity ?? 0) > 0 ? (
               <Button
                 variant="ghost"
@@ -247,7 +232,7 @@ const [quantity, setQuantity] = useState<string>(
                 disabled={isSaving || isResetting}
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                Reset về 0
+                Reset to 0
               </Button>
             ) : (
               <div /> // spacer để giữ layout
@@ -260,7 +245,7 @@ const [quantity, setQuantity] = useState<string>(
                 onClick={handleClose}
                 disabled={isSaving || isResetting}
               >
-                Huỷ
+                Cancel
               </Button>
               <Button
                 size="sm"
@@ -271,12 +256,12 @@ const [quantity, setQuantity] = useState<string>(
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    Đang lưu...
+                    Saving...
                   </>
                 ) : isCreating ? (
-                  "Tạo mới"
+                  "Create"
                 ) : (
-                  "Lưu"
+                  "Save"
                 )}
               </Button>
             </div>
@@ -284,22 +269,21 @@ const [quantity, setQuantity] = useState<string>(
         </DialogContent>
       </Dialog>
 
-      {/* ── Reset Confirm AlertDialog ── */}
       <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset tồn kho về 0?</AlertDialogTitle>
+            <AlertDialogTitle>Reset inventory to 0?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-1">
                 <p>
-                  Thao tác này sẽ đưa toàn bộ số lượng tồn kho của biến thể
+                  This action will set the entire stock quantity of the variant
                 </p>
                 <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-foreground">
                   {variant.sku}
                 </code>
-                <p>về{" "}
+                <p>{" "}
                   <span className="font-semibold text-destructive">0</span>.
-                  Không thể hoàn tác.
+                  Cannot be undone.
                 </p>
               </div>
             </AlertDialogDescription>
@@ -314,7 +298,7 @@ const [quantity, setQuantity] = useState<string>(
               {isResetting ? (
                 <>
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  Đang reset...
+                  Resetting...
                 </>
               ) : (
                 "Reset"

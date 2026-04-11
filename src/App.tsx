@@ -30,7 +30,6 @@ import SystemConfigurationsPage from './pages/system-config/SystemConfigurations
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import CatalogPage from './pages/catalog/CatalogPage';
 
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -75,16 +74,18 @@ function App() {
               }
             />
 
+            {/* ======================= ORDERS TABS ======================= */}
+            {/* Tự động redirect /orders về /orders/instock */}
+            <Route path="/orders" element={<Navigate to="/orders/instock" replace />} />
+            
             <Route
-              path="/orders"
+              path="/orders/instock"
               element={
                 <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <OrderManagement />
                 </ProtectedRoute>
               }
             />
-
-            {/* Partner Approvals: Accessible ONLY by MANAGER */}
             <Route
               path="/partners"
               element={
@@ -95,7 +96,7 @@ function App() {
             />
 
             <Route
-              path="/partner-products"
+              path="/orders/partner"
               element={
                 <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <PartnerProductsPage />
@@ -120,6 +121,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            
             <Route
               path="/catalog-management"
               element={
@@ -128,6 +130,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            
             <Route
               path="/import-service-configs"
               element={
@@ -145,6 +148,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            
             <Route
               path="/feedback-management"
               element={
@@ -245,6 +249,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            
             <Route
               path="/system-configurations"
               element={
@@ -252,9 +257,10 @@ function App() {
                   <SystemConfigurationsPage />
                 </ProtectedRoute>
               }
-              />
+            />
             
           </Route>
+          
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster />

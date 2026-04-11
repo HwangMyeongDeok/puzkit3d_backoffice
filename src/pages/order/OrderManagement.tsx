@@ -71,7 +71,6 @@ export function OrderManagement() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
@@ -96,7 +95,6 @@ export function OrderManagement() {
         </Card>
       </div>
 
-      {/* Orders Table */}
       <Card>
         <CardHeader className="gap-4 md:flex-row md:items-center md:justify-between">
           <div>

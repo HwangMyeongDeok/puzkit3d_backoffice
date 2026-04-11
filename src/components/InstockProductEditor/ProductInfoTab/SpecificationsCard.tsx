@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 
 import type { ProductFormValues } from '@/pages/manager/product-editor/schema';
 
-// Khai báo type cơ bản cho các danh sách để tránh lỗi TypeScript
 interface MasterDataItem {
   id: string;
   name: string;

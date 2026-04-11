@@ -13,8 +13,8 @@ export function Pagination({ page, pageSize, totalCount, onPageChange }: Paginat
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/10">
       <p className="text-xs text-muted-foreground">
-        Trang <span className="font-medium text-foreground">{page}</span> / {totalPages} 
-        <span className="mx-2">—</span> Tổng {totalCount} sản phẩm
+        Page <span className="font-medium text-foreground">{page}</span> / {totalPages} 
+        <span className="mx-2">—</span> Total {totalCount} products
       </p>
       <div className="flex gap-1">
         <Button
@@ -24,7 +24,7 @@ export function Pagination({ page, pageSize, totalCount, onPageChange }: Paginat
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
-          ‹ Trước
+          ‹ Prev
         </Button>
         <Button
           variant="outline"
@@ -33,7 +33,7 @@ export function Pagination({ page, pageSize, totalCount, onPageChange }: Paginat
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >
-          Sau ›
+          Next ›
         </Button>
       </div>
     </div>

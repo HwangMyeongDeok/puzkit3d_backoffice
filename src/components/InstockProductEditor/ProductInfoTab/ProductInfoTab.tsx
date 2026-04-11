@@ -18,14 +18,11 @@ import {
 } from '@/hooks/useMasterDataQueries';
 import { productFormSchema, type ProductFormValues } from '@/pages/manager/product-editor/schema';
 
-// Import các sub-components đã tách
 import { BasicInfoCard } from './BasicInfoCard';
 import { ImagesCard } from './ImagesCard';
 import { SpecificationsCard } from './SpecificationsCard';
 
-// ─────────────────────────────────────────────
-// TYPES & INTERFACES
-// ─────────────────────────────────────────────
+
 export interface ProductFiles {
   thumbnail: File | null;
   previews: File[];
@@ -38,25 +35,20 @@ export interface ProductInfoTabProps {
   onNextStep: (data: ProductFormValues, files: ProductFiles) => void;
 }
 
-// ─────────────────────────────────────────────
-// COMPONENT
-// ─────────────────────────────────────────────
 export function ProductInfoTab({
   isCreateMode,
   initialData,
   initialFiles,
   onNextStep,
 }: ProductInfoTabProps) {
-  // ── Master data ──
   const { data: topics, isLoading: isTopicsLoading } = useTopics();
   const { data: materials, isLoading: isMaterialsLoading } = useMaterials();
   const { data: capabilities, isLoading: isCapabilitiesLoading } = useCapabilities();
   const { data: assemblyMethods, isLoading: isAssemblyMethodsLoading } = useAssemblyMethods();
 
   const isMasterDataLoading =
-    isTopicsLoading || isMaterialsLoading || isCapabilitiesLoading || isAssemblyMethodsLoading;
+  isTopicsLoading || isMaterialsLoading || isCapabilitiesLoading || isAssemblyMethodsLoading;
 
-  // ── File state (Chỉ giữ trên UI, chưa upload) ──
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(initialFiles?.thumbnail || null);
   const [thumbnailLocalPreview, setThumbnailLocalPreview] = useState<string | null>(null);
   const [thumbnailError, setThumbnailError] = useState<string | null>(null);
@@ -76,10 +68,8 @@ export function ProductInfoTab({
       if (thumbnailLocalPreview) URL.revokeObjectURL(thumbnailLocalPreview);
       previewLocalPreviews.forEach(url => URL.revokeObjectURL(url));
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Form Setup ──
   const defaultValues: ProductFormValues = {
     slug: initialData?.slug || '',
     name: initialData?.name || '',
@@ -102,7 +92,6 @@ export function ProductInfoTab({
     mode: 'onTouched',
   });
 
-  // ── File handlers ──
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -142,7 +131,6 @@ export function ProductInfoTab({
     form.setValue('previewAsset', current);
   };
 
-  // ── Submit Logic ──
   const onSubmit = (values: ProductFormValues) => {
     if (isCreateMode && !thumbnailFile && !values.thumbnailUrl) {
       setThumbnailError('Thumbnail image is required');
@@ -158,7 +146,6 @@ export function ProductInfoTab({
     onNextStep(finalData, filesToPass);
   };
 
-  // ── Computed Variables for ImagesCard ──
   const existingPreviewAsset = form.watch('previewAsset') as Record<string, string> | undefined;
   const existingPreviews = Object.entries(existingPreviewAsset || {}).filter(
     ([, v]) => typeof v === 'string' && (v.startsWith('http') || v.includes('/'))
@@ -167,7 +154,6 @@ export function ProductInfoTab({
   const canAddMorePreviews = totalPreviewCount < 3;
   const displayThumbnail = thumbnailLocalPreview || form.watch('thumbnailUrl') || null;
 
-  // ── Render ──
   if (isMasterDataLoading) {
     return (
       <div className="flex items-center justify-center p-8">

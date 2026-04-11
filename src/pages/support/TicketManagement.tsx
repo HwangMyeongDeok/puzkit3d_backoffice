@@ -59,7 +59,6 @@ export function TicketManagement() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Page Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Support Tickets</h1>
@@ -72,7 +71,6 @@ export function TicketManagement() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
@@ -94,7 +92,6 @@ export function TicketManagement() {
         </Card>
       </div>
 
-      {/* Table Card */}
       <Card>
         <CardHeader className="gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -162,7 +159,6 @@ export function TicketManagement() {
             </Table>
           </div>
 
-          {/* Pagination */}
           {data && (
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-muted-foreground text-sm">
