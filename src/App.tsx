@@ -5,7 +5,6 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { useAuthStore } from './store/useAuthStore';
 import { MainLayout } from './components/layout/MainLayout';
 import { StaffPartnerProductRequestsPage } from './pages/staff/StaffPartnerProductRequestsPage';
-import { CatalogPage } from './pages/catalog/CatalogPage';
 
 import { Login } from './pages/auth/Login';
 import { Unauthorized } from './pages/Unauthorized';
@@ -29,6 +28,7 @@ import { ProductionTemplatePage } from './pages/production-template/ProductionTe
 import QuotationPage from './pages/quotation/QuotationPage';
 import SystemConfigurationsPage from './pages/system-config/SystemConfigurationsPage';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import CatalogPage from './pages/catalog/CatalogPage';
 
 
 const queryClient = new QueryClient({
@@ -121,7 +121,7 @@ function App() {
               }
             />
             <Route
-              path="/catalog"
+              path="/catalog-management"
               element={
                 <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <CatalogPage />
