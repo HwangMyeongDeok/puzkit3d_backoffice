@@ -10,10 +10,10 @@ export const RequirementHeader = ({ onAddNew }: RequirementHeaderProps) => {
     <div className="flex justify-between items-end">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Requirement Management</h1>
-        <p className="text-muted-foreground">Thiết lập danh mục kỹ thuật cho khách hàng đặt hàng.</p>
+        <p className="text-muted-foreground">Set up technical specifications for customers ordering.</p>
       </div>
       <Button onClick={onAddNew} className="gap-2">
-        <Plus className="w-4 h-4" /> Tạo mẫu mới
+        <Plus className="w-4 h-4" /> Create New Requirement
       </Button>
     </div>
   );

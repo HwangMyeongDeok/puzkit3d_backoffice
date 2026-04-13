@@ -13,6 +13,7 @@ export interface CatalogItem {
   id: string;
   name: string;
   slug: string;
+  factorPercentage: number;
   description: string | null;
   isActive: boolean;
 }
