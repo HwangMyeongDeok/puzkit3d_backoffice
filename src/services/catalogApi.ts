@@ -8,7 +8,7 @@ export type CatalogResource =
   | "capabilities"
   | "materials"
   | "topics"
-  | "drives"; // <-- Đã thêm drives
+  | "drives";
 
 export interface CatalogItemBase {
   id: string;
@@ -24,7 +24,14 @@ export interface TopicItem extends CatalogItemBase {
   parentId: string | null;
 }
 
-export type CatalogItem = CatalogItemBase | TopicItem;
+// --- Thêm Type cho Material ---
+export interface MaterialItem extends CatalogItemBase {
+  factorPercentage: number;
+  basePrice: number;
+}
+
+// Cập nhật lại CatalogItem để bao gồm MaterialItem
+export type CatalogItem = CatalogItemBase | TopicItem | MaterialItem;
 
 // --- Thêm Type riêng cho Drive ---
 export interface DriveItem {
@@ -54,6 +61,16 @@ export interface CatalogPayload {
 
 export interface TopicPayload extends CatalogPayload {
   parentId?: string | null;
+}
+
+// --- Thêm Payload cho Material ---
+export interface MaterialPayload extends CatalogPayload {
+  name: string;
+  slug: string;
+  factorPercentage: number;
+  basePrice: number;
+  description: string;
+  isActive: boolean;
 }
 
 // ==========================================
@@ -112,25 +129,36 @@ export interface CapabilityDriveBriefItem {
   name: string;
 }
 
+export interface UpdateTopicMaterialCapabilityPayload {
+  isActive: boolean;
+}
+
+export interface UpdateCapabilityMaterialAssemblyPayload {
+  isActive: boolean;
+}
+
 // ==========================================
 // 3. CATALOG SERVICES (CRUD BASE)
 // ==========================================
+// ==========================================
+// GENERIC CATALOG API
+// ==========================================
 export async function getCatalogList<T extends CatalogItem>(
   resource: CatalogResource,
-  pageNumber = 1,
-  pageSize = 8,
-  searchTerm = "",
-  isActive?: boolean,
-  ascending = true
+  pageNumber: number,     // Required
+  pageSize: number,       // Required
+  ascending: boolean,     // Required
+  searchTerm?: string,    // Optional
+  isActive?: boolean      // Optional
 ) {
   const response = await axiosInstance.get<PagedResponse<T>>(`/${resource}`, {
-    params: { pageNumber, pageSize, searchTerm, isActive, ascending },
+    params: { pageNumber, pageSize, ascending, searchTerm, isActive },
   });
   return response.data;
 }
 
 export async function createCatalogItem(
-  resource: Exclude<CatalogResource, "topics">,
+  resource: Exclude<CatalogResource, "topics" | "materials">,
   payload: CatalogPayload
 ) {
   const response = await axiosInstance.post<string>(`/${resource}`, payload);
@@ -138,7 +166,7 @@ export async function createCatalogItem(
 }
 
 export async function updateCatalogItem(
-  resource: Exclude<CatalogResource, "topics">,
+  resource: Exclude<CatalogResource, "topics" | "materials">,
   id: string,
   payload: CatalogPayload
 ) {
@@ -151,22 +179,26 @@ export async function deleteCatalogItem(resource: CatalogResource, id: string) {
   return response.data;
 }
 
+// ==========================================
+// TOPICS API
+// ==========================================
 export async function getTopics(
-  pageNumber = 1, 
-  pageSize = 8, 
-  searchTerm = "", 
-  isActive?: boolean, 
-  ascending = true
+  pageNumber: number,     // Required
+  pageSize: number,       // Required
+  ascending: boolean,     // Required
+  searchTerm?: string,    // Optional
+  isActive?: boolean      // Optional
 ) {
   const response = await axiosInstance.get<PagedResponse<TopicItem>>("/topics", {
-    params: { pageNumber, pageSize, searchTerm, isActive, ascending },
+    params: { pageNumber, pageSize, ascending, searchTerm, isActive },
   });
   return response.data;
 }
 
 export async function getAllTopics(isActive = true) {
+  // Dù là getAll, API vẫn bắt buộc truyền các params này nên ta gán cứng cho nó
   const response = await axiosInstance.get<PagedResponse<TopicItem>>("/topics", {
-    params: { pageNumber: 1, pageSize: 1000, isActive },
+    params: { pageNumber: 1, pageSize: 1000, ascending: true, isActive },
   });
   return response.data;
 }
@@ -183,6 +215,44 @@ export async function updateTopic(id: string, payload: TopicPayload) {
 
 export async function deleteTopic(id: string) {
   const response = await axiosInstance.delete(`/topics/${id}`);
+  return response.data;
+}
+
+// ==========================================
+// MATERIALS API (Tương tự Topics)
+// ==========================================
+export async function getMaterials(
+  pageNumber: number,     // Required
+  pageSize: number,       // Required
+  ascending: boolean,     // Required
+  searchTerm?: string,    // Optional
+  isActive?: boolean      // Optional
+) {
+  const response = await axiosInstance.get<PagedResponse<MaterialItem>>("/materials", {
+    params: { pageNumber, pageSize, ascending, searchTerm, isActive },
+  });
+  return response.data;
+}
+
+export async function getAllMaterials(isActive = true) {
+  const response = await axiosInstance.get<PagedResponse<MaterialItem>>("/materials", {
+    params: { pageNumber: 1, pageSize: 1000, ascending: true, isActive },
+  });
+  return response.data;
+}
+
+export async function createMaterial(payload: MaterialPayload) {
+  const response = await axiosInstance.post<string>("/materials", payload);
+  return response.data;
+}
+
+export async function updateMaterial(id: string, payload: MaterialPayload) {
+  const response = await axiosInstance.put(`/materials/${id}`, payload);
+  return response.data;
+}
+
+export async function deleteMaterial(id: string) {
+  const response = await axiosInstance.delete(`/materials/${id}`);
   return response.data;
 }
 
@@ -240,7 +310,6 @@ export async function assignCapabilityMaterialToAssembly(
   return response.data;
 }
 
-
 // Gắn (Assign) Drive vào 1 Capability
 export async function assignDriveToCapability(
   capabilityId: string, 
@@ -262,15 +331,11 @@ export async function getAssignedDrivesForCapability(capabilityId: string) {
 }
 
 export async function getActiveDrivesForCapabilities(payload: GetDrivesByCapabilitiesPayload) {
-  const response = await axiosInstance.post<CapabilityDriveBriefItem[]>(
+  const response = await axiosInstance.post<DriveItem[]>(
     '/capabilities/drives', 
     payload
   );
   return response.data;
-}
-
-export interface UpdateTopicMaterialCapabilityPayload {
-  isActive: boolean;
 }
 
 // API Update (PUT) trạng thái Active của Topic-Material Capability
@@ -308,11 +373,6 @@ export async function deleteCapabilityDrive(
   return response.data;
 }
 
-// Payload cho API PUT cập nhật trạng thái
-export interface UpdateCapabilityMaterialAssemblyPayload {
-  isActive: boolean;
-}
-
 // 1. API Cập nhật (PUT) trạng thái Active
 export async function updateCapabilityMaterialAssemblyStatus(
   assemblyId: string,
@@ -333,6 +393,38 @@ export async function deleteCapabilityMaterialAssembly(
 ) {
   const response = await axiosInstance.delete(
     `/assembly-methods/${assemblyId}/capability-material-assemblies/${cmcId}`
+  );
+  return response.data;
+}
+
+export interface FilterBriefItem {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export async function getActiveCapabilitiesForTopicAndMaterial(
+  topicId: string,
+  materialId: string
+) {
+  const response = await axiosInstance.get<FilterBriefItem[]>(
+    "/filters/filter-capability",
+    {
+      params: { topicId, materialId },
+    }
+  );
+  return response.data;
+}
+
+export async function getActiveAssemblyMethodsForCapabilityAndMaterial(
+  capabilityId: string,
+  materialId: string
+) {
+  const response = await axiosInstance.get<FilterBriefItem[]>(
+    "/filters/filter-assembly-method",
+    {
+      params: { capabilityId, materialId },
+    }
   );
   return response.data;
 }

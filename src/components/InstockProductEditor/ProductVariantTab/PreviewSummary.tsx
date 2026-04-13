@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-import { useAssemblyMethods, useCapabilities, useMaterials, useTopics } from '@/hooks/useMasterDataQueries';
+// SỬ DỤNG HOOK MỚI
+import { useAllTopics, useCatalogList } from '@/hooks/useCatalogQueries';
+import type {MaterialItem, DriveItem, CatalogItemBase } from '@/services/catalogApi';
+
 import type { ProductFormValues } from '@/pages/manager/product-editor/schema';
 import type { ProductFiles } from '@/components/InstockProductEditor/ProductInfoTab/ProductInfoTab';
-
 import type { VariantFormValues } from '@/pages/manager/product-editor/schema';
 
 export interface VariantPriceDraft {
@@ -19,8 +21,10 @@ export interface VariantPriceDraft {
 export interface VariantDraft extends Omit<VariantFormValues, 'initialStock'> {
   localId: string;
   initialStock: number;
+  previewImages?: File[]; // Thêm trường này để lưu file ảnh preview mới upload cho mỗi variant
   prices: VariantPriceDraft[];
 }
+
 interface PreviewSummaryProps {
   productDraftData?: Partial<ProductFormValues>;
   productDraftFiles?: ProductFiles;
@@ -38,24 +42,50 @@ export function PreviewSummary({
   onSubmit,
   isSubmitting,
 }: PreviewSummaryProps) {
-  const { data: topics } = useTopics();
-  const { data: materials } = useMaterials();
-  const { data: capabilities } = useCapabilities();
-  const { data: assemblyMethods } = useAssemblyMethods();
+  // --- FETCH MASTER DATA ĐỂ MAP ID SANG NAME ---
+  const { data: topicsData } = useAllTopics(true);
+  const topics = topicsData?.items || [];
 
+  const { data: materialsData } = useCatalogList('materials', 1, 100, '', true);
+  const materials = (Array.isArray(materialsData) ? materialsData : materialsData?.items || []) as MaterialItem[];
+
+  const { data: capsData } = useCatalogList('capabilities', 1, 100, '', true);
+  const capabilities = (Array.isArray(capsData) ? capsData : capsData?.items || []) as CatalogItemBase[];
+
+  const { data: methodsData } = useCatalogList('assembly-methods', 1, 100, '', true);
+  const assemblyMethods = (Array.isArray(methodsData) ? methodsData : methodsData?.items || []) as CatalogItemBase[];
+
+  const { data: drivesData } = useCatalogList('drives', 1, 100, '', true);
+  const drivesList = (Array.isArray(drivesData) ? drivesData : drivesData?.items || []) as DriveItem[];
+
+  // --- XỬ LÝ HÌNH ẢNH ---
   const thumbnailUrl = productDraftFiles?.thumbnail ? URL.createObjectURL(productDraftFiles.thumbnail) : productDraftData?.thumbnailUrl;
   const existingPreviewUrls = Object.values(productDraftData?.previewAsset || {}).filter(url => typeof url === 'string') as string[];
   const newPreviewUrls = productDraftFiles?.previews?.map(file => URL.createObjectURL(file)) || [];
   const allPreviewUrls = [...existingPreviewUrls, ...newPreviewUrls];
 
-  const topicName = topics?.find(t => t.id === productDraftData?.topicId)?.name || 'Not selected';
-  const materialName = materials?.find(m => m.id === productDraftData?.materialId)?.name || 'Not selected';
-  const assemblyMethodName = assemblyMethods?.find(a => a.id === productDraftData?.assemblyMethodId)?.name || 'Not selected';
+  // --- XỬ LÝ MAP ID SANG NAME ---
+  const topicName = topics.find(t => t.id === productDraftData?.topicId)?.name || 'Not selected';
+  const materialName = materials.find(m => m.id === productDraftData?.materialId)?.name || 'Not selected';
 
-  const capabilityNames = productDraftData?.capabilityIds
-    ?.map(id => capabilities?.find(c => c.id === id)?.name)
+  // Cập nhật: Map mảng assemblyMethodIds thay vì 1 string
+  const assemblyMethodNames = productDraftData?.assemblyMethodIds
+    ?.map(id => assemblyMethods.find(a => a.id === id)?.name)
     .filter(Boolean)
     .join(', ') || 'Not selected';
+
+  const capabilityNames = productDraftData?.capabilityIds
+    ?.map(id => capabilities.find(c => c.id === id)?.name)
+    .filter(Boolean)
+    .join(', ') || 'Not selected';
+
+  // Thêm: Hiển thị Drive kèm Quantity
+  const driveDetailsDisplay = productDraftData?.driveDetails
+    ?.map(d => {
+      const driveName = drivesList.find(drv => drv.id === d.driveId)?.name || 'Unknown Drive';
+      return `${driveName} (x${d.quantity})`;
+    })
+    .join(', ') || 'None';
 
   return (
     <Card className="animate-in fade-in zoom-in-95 duration-300 border-brand shadow-md">
@@ -107,10 +137,6 @@ export function PreviewSummary({
                   <p className="font-medium text-slate-800 text-sm">{materialName}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Method</p>
-                  <p className="font-medium text-slate-800 text-sm">{assemblyMethodName}</p>
-                </div>
-                <div>
                   <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Difficulty</p>
                   <p className="font-medium text-slate-800 text-sm">{productDraftData?.difficultLevel || "N/A"}</p>
                 </div>
@@ -122,9 +148,21 @@ export function PreviewSummary({
                   <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Piece Count</p>
                   <p className="font-medium text-slate-800 text-sm">{productDraftData?.totalPieceCount}</p>
                 </div>
+                
+                {/* Dàn layout lại cho các mảng nhiều phần tử ở bên dưới */}
+                <div className="col-span-2 sm:col-span-3 pt-2 border-t mt-2">
+                  <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Methods</p>
+                  <p className="font-medium text-slate-800 text-sm">{assemblyMethodNames}</p>
+                </div>
+                
                 <div className="col-span-2 sm:col-span-3 pt-2 border-t mt-2">
                   <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Capabilities</p>
                   <p className="font-medium text-brand text-sm">{capabilityNames}</p>
+                </div>
+
+                <div className="col-span-2 sm:col-span-3 pt-2 border-t mt-2">
+                  <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Drives</p>
+                  <p className="font-medium text-slate-800 text-sm">{driveDetailsDisplay}</p>
                 </div>
               </div>
 

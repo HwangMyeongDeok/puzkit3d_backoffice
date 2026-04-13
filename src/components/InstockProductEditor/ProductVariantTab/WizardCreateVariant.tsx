@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Plus, ArrowLeft, ListPlus, ExternalLink, Trash2, Tag, Save, Pencil, X } from 'lucide-react';
+import { Plus, ArrowLeft, ListPlus, ExternalLink, Trash2, Tag, Save, Pencil, X, ImagePlus, AlertCircle, CheckCircle } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,10 @@ import { Badge } from '@/components/ui/badge';
 import { useInstockPrices } from '@/hooks/useInstockPriceQueries';
 import { formatCurrency, parseCurrency } from '@/lib/utils';
 import type { VariantDraft, VariantPriceDraft } from '@/components/InstockProductEditor/ProductVariantTab/PreviewSummary';
+import type { DriveItem } from '@/services/catalogApi';
 
 interface WizardCreateVariantProps {
-  isCreateMode?: boolean; // THÊM PROP NÀY
+  isCreateMode?: boolean;
 
   // Các props dùng cho lúc CREATE
   variantsList?: VariantDraft[];
@@ -27,21 +28,24 @@ interface WizardCreateVariantProps {
   initialVariant?: VariantDraft; 
   onSaveEdit?: (updatedData: VariantDraft) => Promise<void>;
   onCancelEdit?: () => void;
+
+  // Nhận danh sách Drives từ component cha
+  validDrives?: DriveItem[];
 }
 
 export function WizardCreateVariant({ 
-  isCreateMode = true, // Mặc định là true để không ảnh hưởng code cũ
+  isCreateMode = true, 
   variantsList = [], 
   setVariantsList, 
   onBack, 
   onNext,
   initialVariant,
   onSaveEdit,
-  onCancelEdit
+  onCancelEdit,
+  validDrives = []
 }: WizardCreateVariantProps) {
   const { data: priceListData } = useInstockPrices({ pageNumber: 1, pageSize: 100 });
 
-  // Khởi tạo state: Nếu đang EDIT thì lấy data cũ, nếu CREATE thì để rỗng
   const [draftVariant, setDraftVariant] = useState<Partial<VariantDraft>>({
     color: !isCreateMode && initialVariant ? initialVariant.color : '', 
     assembledLengthMm: !isCreateMode && initialVariant ? initialVariant.assembledLengthMm : 0, 
@@ -55,12 +59,55 @@ export function WizardCreateVariant({
     !isCreateMode && initialVariant?.prices ? initialVariant.prices : []
   );
 
+  const [previewImages, setPreviewImages] = useState<File[]>(
+    !isCreateMode && initialVariant?.previewImages ? initialVariant.previewImages : []
+  );
+  const [previewLocalUrls, setPreviewLocalUrls] = useState<string[]>([]);
+  const previewInputRef = useRef<HTMLInputElement>(null);
+
   const [tempPriceId, setTempPriceId] = useState('');
   const [tempUnitPrice, setTempUnitPrice] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingPriceId, setEditingPriceId] = useState<string | null>(null); // Track price đang được sửa
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
 
-  // Nếu initialVariant thay đổi (lúc đổi qua lại giữa các variant trong lúc edit), cập nhật lại form
+  // =====================================================================
+  // CHUẨN HÓA DRIVES (Bóc lớp vỏ JSON từ API để lấy đúng data)
+  // =====================================================================
+  const normalizedDrives = useMemo(() => {
+    if (!validDrives || validDrives.length === 0) return [];
+    // Tự động kiểm tra nếu có thuộc tính .drive bọc ngoài thì lôi nó ra
+    return validDrives.map((d: any) => d.drive ? d.drive : d).filter(Boolean);
+  }, [validDrives]);
+
+  // =====================================================================
+  // LOGIC TÍNH TOÁN VÀ KIỂM TRA VOLUME
+  // =====================================================================
+  const calculatedVolume = useMemo(() => {
+    const l = draftVariant.assembledLengthMm || 0;
+    const w = draftVariant.assembledWidthMm || 0;
+    const h = draftVariant.assembledHeightMm || 0;
+    return l * w * h;
+  }, [draftVariant.assembledLengthMm, draftVariant.assembledWidthMm, draftVariant.assembledHeightMm]);
+
+  // Kiểm tra xem user đã bắt đầu nhập kích thước chưa
+  const hasDimensions = calculatedVolume > 0;
+
+  // Lọc ra các drive không đạt yêu cầu
+  const failingDrives = useMemo(() => {
+    if (normalizedDrives.length === 0) return [];
+    return normalizedDrives.filter(d => calculatedVolume < (d.minVolume || 0));
+  }, [normalizedDrives, calculatedVolume]);
+
+  const isVolumeValid = normalizedDrives.length === 0 ? hasDimensions : (hasDimensions && failingDrives.length === 0);
+
+  // Cleanup Image URLs
+  useEffect(() => {
+    const urls = previewImages.map(file => URL.createObjectURL(file));
+    setPreviewLocalUrls(urls);
+    return () => urls.forEach(URL.revokeObjectURL);
+  }, [previewImages]);
+
+  // Reset form khi initialVariant thay đổi
   useEffect(() => {
     if (!isCreateMode && initialVariant) {
       setDraftVariant({
@@ -72,68 +119,63 @@ export function WizardCreateVariant({
         isActive: initialVariant.isActive,
       });
       setDraftPrices(initialVariant.prices || []);
+      setPreviewImages(initialVariant.previewImages || []);
     }
   }, [isCreateMode, initialVariant]);
 
+  // Handle Image Upload
+  const handlePreviewImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setPreviewImages(prev => [...prev, ...files]);
+    e.target.value = '';
+  };
+
+  const handleRemovePreviewImage = (index: number) => {
+    setPreviewImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Pricing Logic
   const handleAddPriceToDraft = () => {
     if (!tempPriceId) return toast.error("Please select a price list!");
-
     const priceNum = parseCurrency(tempUnitPrice);
     if (priceNum < 10000) return toast.error("Selling price must be at least 10,000 VND!");
-
-    if (draftPrices.some(p => p.priceId === tempPriceId)) {
-      return toast.error("This price list has already been added for the current variant!");
-    }
-
+    if (draftPrices.some(p => p.priceId === tempPriceId)) return toast.error("This price list has already been added!");
     const selectedPrice = priceListData?.items.find(p => p.id === tempPriceId);
-
-    setDraftPrices([...draftPrices, {
-      priceId: tempPriceId,
-      priceName: selectedPrice?.name || 'Unknown',
-      unitPrice: priceNum
-    }]);
-
-    setTempPriceId('');
-    setTempUnitPrice('');
+    setDraftPrices([...draftPrices, { priceId: tempPriceId, priceName: selectedPrice?.name || 'Unknown', unitPrice: priceNum }]);
+    setTempPriceId(''); setTempUnitPrice('');
   };
 
-  // Bấm nút Edit trên 1 price row → populate form để sửa
   const handleEditDraftPrice = (price: VariantPriceDraft) => {
-    setEditingPriceId(price.priceId);
-    setTempPriceId(price.priceId);
-    setTempUnitPrice(formatCurrency(price.unitPrice.toString()));
+    setEditingPriceId(price.priceId); setTempPriceId(price.priceId); setTempUnitPrice(formatCurrency(price.unitPrice.toString()));
   };
 
-  // Bấm "Update Price" → cập nhật giá trong draft list
   const handleUpdateDraftPrice = () => {
     if (!editingPriceId) return;
-
     const priceNum = parseCurrency(tempUnitPrice);
     if (priceNum < 10000) return toast.error("Selling price must be at least 10,000 VND!");
-
-    setDraftPrices(draftPrices.map(p =>
-      p.priceId === editingPriceId ? { ...p, unitPrice: priceNum } : p
-    ));
-
-    toast.success('Price updated!');
-    handleCancelEditPrice();
+    setDraftPrices(draftPrices.map(p => p.priceId === editingPriceId ? { ...p, unitPrice: priceNum } : p));
+    toast.success('Price updated!'); handleCancelEditPrice();
   };
 
-  // Hủy sửa price → reset form
-  const handleCancelEditPrice = () => {
-    setEditingPriceId(null);
-    setTempPriceId('');
-    setTempUnitPrice('');
-  };
-
+  const handleCancelEditPrice = () => { setEditingPriceId(null); setTempPriceId(''); setTempUnitPrice(''); };
   const handleRemoveDraftPrice = (idToRemove: string) => {
-    // Nếu đang edit price này thì cancel luôn
     if (editingPriceId === idToRemove) handleCancelEditPrice();
     setDraftPrices(draftPrices.filter(p => p.priceId !== idToRemove));
   };
 
+  // Submit Logic
   const handleSubmit = async () => {
     if (!draftVariant.color) return toast.error("Please enter a color!");
+    
+    if (!isVolumeValid) {
+      if (!hasDimensions) {
+        return toast.error("Please enter valid dimensions > 0!");
+      }
+      if (failingDrives.length > 0) {
+        return toast.error(`Dimensions invalid for Drive: ${failingDrives[0].name}.`);
+      }
+    }
+
     if (draftPrices.length === 0) return toast.error("Please configure at least 1 price for this variant!");
 
     const hasStandardPrice = draftPrices.some(p => p.priceName.toLowerCase().includes('standard'));
@@ -148,29 +190,21 @@ export function WizardCreateVariant({
       initialStock: draftVariant.initialStock || 0,
       isActive: draftVariant.isActive ?? true,
       prices: draftPrices,
+      previewImages: previewImages, 
     };
 
     if (isCreateMode) {
-      // LOGIC CỦA LUỒNG TẠO MỚI (WIZARD)
       if (setVariantsList) {
         setVariantsList([...variantsList, payload]);
         toast.success(`Variant ${draftVariant.color} added to the pending list!`);
-        setDraftVariant({
-          color: '', assembledLengthMm: 0, assembledWidthMm: 0, assembledHeightMm: 0,
-          initialStock: 0, isActive: true
-        });
+        setDraftVariant({ color: '', assembledLengthMm: 0, assembledWidthMm: 0, assembledHeightMm: 0, initialStock: 0, isActive: true });
         setDraftPrices([]);
+        setPreviewImages([]);
       }
     } else {
-      // LOGIC CỦA LUỒNG EDIT
       if (onSaveEdit) {
         setIsSubmitting(true);
-        try {
-          await onSaveEdit(payload);
-          // Toast success thường để ở component cha gọi api, nhưng ông có thể thêm ở đây nếu muốn
-        } finally {
-          setIsSubmitting(false);
-        }
+        try { await onSaveEdit(payload); } finally { setIsSubmitting(false); }
       }
     }
   };
@@ -182,7 +216,7 @@ export function WizardCreateVariant({
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       
-      {/* CÁI BẢNG PENDING CHỈ HIỆN LÚC CREATE MODE */}
+      {/* PENDING LIST */}
       {isCreateMode && variantsList.length > 0 && (
         <Card className="border-emerald-200 shadow-sm">
           <CardHeader className="bg-emerald-50/50 pb-3">
@@ -195,6 +229,7 @@ export function WizardCreateVariant({
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-4">Color</TableHead>
+                  <TableHead>Images</TableHead>
                   <TableHead>Dimensions</TableHead>
                   <TableHead>Initial Stock</TableHead>
                   <TableHead>Configured Price Lists</TableHead>
@@ -205,6 +240,7 @@ export function WizardCreateVariant({
                 {variantsList.map((v) => (
                   <TableRow key={v.localId}>
                     <TableCell className="pl-4 font-medium">{v.color}</TableCell>
+                    <TableCell className="text-slate-500 text-sm">{v.previewImages?.length || 0} files</TableCell>
                     <TableCell className="text-slate-500 text-sm">{v.assembledLengthMm}x{v.assembledWidthMm}x{v.assembledHeightMm}</TableCell>
                     <TableCell>{v.initialStock}</TableCell>
                     <TableCell>
@@ -229,20 +265,18 @@ export function WizardCreateVariant({
         </Card>
       )}
 
-      {/* PHẦN FORM CHUNG */}
+      {/* CHÍNH: FORM */}
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="border-b bg-slate-50/50">
           <div className="flex items-center gap-3">
-            {/* LÚC TẠO DÙNG onBack, LÚC EDIT DÙNG onCancelEdit */}
             {isCreateMode && onBack && <Button variant="outline" size="icon" onClick={onBack}><ArrowLeft className="h-4 w-4" /></Button>}
             {!isCreateMode && onCancelEdit && <Button variant="outline" size="icon" onClick={onCancelEdit}><ArrowLeft className="h-4 w-4" /></Button>}
-            
             <div>
               <CardTitle className="text-xl">
                 {isCreateMode ? 'Step 2: Add Variants & Pricing' : `Edit Variant: ${initialVariant?.color || ''}`}
               </CardTitle>
               <CardDescription>
-                {isCreateMode ? 'Configure physical attributes and MULTIPLE prices for each variant.' : 'Update physical attributes, inventory, and prices.'}
+                Configure physical attributes, images, and multiple prices.
               </CardDescription>
             </div>
           </div>
@@ -254,16 +288,99 @@ export function WizardCreateVariant({
               {/* === BƯỚC 1: PHYSICAL INFO === */}
               <div>
                 <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-slate-200 text-sm flex items-center justify-center">1</div> Physical Information</h3>
-                <div className="space-y-4 p-4 border rounded-lg bg-white">
+                <div className="space-y-6 p-4 border rounded-lg bg-white">
+                  
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Color <span className="text-red-500">*</span></label>
                     <Input value={draftVariant.color} onChange={e => setDraftVariant({ ...draftVariant, color: e.target.value })} placeholder="Ex: Red, Oak Wood..." />
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1"><label className="text-xs text-slate-500">Length (mm)</label><Input type="number" value={draftVariant.assembledLengthMm} onChange={e => setDraftVariant({ ...draftVariant, assembledLengthMm: Number(e.target.value) })} /></div>
-                    <div className="space-y-1"><label className="text-xs text-slate-500">Width (mm)</label><Input type="number" value={draftVariant.assembledWidthMm} onChange={e => setDraftVariant({ ...draftVariant, assembledWidthMm: Number(e.target.value) })} /></div>
-                    <div className="space-y-1"><label className="text-xs text-slate-500">Height (mm)</label><Input type="number" value={draftVariant.assembledHeightMm} onChange={e => setDraftVariant({ ...draftVariant, assembledHeightMm: Number(e.target.value) })} /></div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-end mb-2">
+                      <label className="text-sm font-medium">Dimensions (mm) <span className="text-red-500">*</span></label>
+                      <span className="text-xs text-slate-500">
+                        Thể tích hiện tại: <strong className="text-slate-800">{calculatedVolume.toLocaleString()} mm³</strong>
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-1"><label className="text-xs text-slate-500">Length</label><Input type="number" min={0} value={draftVariant.assembledLengthMm} onChange={e => setDraftVariant({ ...draftVariant, assembledLengthMm: Number(e.target.value) })} /></div>
+                      <div className="space-y-1"><label className="text-xs text-slate-500">Width</label><Input type="number" min={0} value={draftVariant.assembledWidthMm} onChange={e => setDraftVariant({ ...draftVariant, assembledWidthMm: Number(e.target.value) })} /></div>
+                      <div className="space-y-1"><label className="text-xs text-slate-500">Height</label><Input type="number" min={0} value={draftVariant.assembledHeightMm} onChange={e => setDraftVariant({ ...draftVariant, assembledHeightMm: Number(e.target.value) })} /></div>
+                    </div>
+                    
+                    {/* KHU VỰC HIỂN THỊ DRIVE REQUIREMENTS CHI TIẾT */}
+                    <div className="mt-4 pt-4 border-t">
+                      <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3 block">
+                        Yêu cầu từ Capabilities:
+                      </label>
+                      
+                      {normalizedDrives.length === 0 ? (
+                        <div className="p-3 text-sm rounded-md border bg-amber-50 text-amber-700 border-amber-200 flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                          <span>⚠️ Chưa có Drive nào yêu cầu thể tích tối thiểu.</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {normalizedDrives.map((d: any) => {
+                            const minV = d.minVolume || 0;
+                            const isPass = hasDimensions && calculatedVolume >= minV;
+                            const isFail = hasDimensions && calculatedVolume < minV;
+
+                            return (
+                              <div key={d.id} className={`flex flex-col gap-1.5 p-3 rounded-md border text-sm transition-colors duration-200 ${
+                                !hasDimensions ? 'bg-slate-50 border-slate-200 text-slate-700' :
+                                isPass ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 
+                                'bg-rose-50 border-rose-200 text-rose-800'
+                              }`}>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold">{d.name || "Unknown Drive"}</span>
+                                    <Badge variant="outline" className="text-[10px] uppercase font-mono tracking-wider opacity-70 border-current bg-transparent">
+                                      Min: {minV.toLocaleString()} mm³
+                                    </Badge>
+                                  </div>
+                                  {hasDimensions && (
+                                    isPass ? <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                  )}
+                                </div>
+                                
+                                {/* Thông báo đỏ xuất hiện ngay lập tức khi KHÔNG đạt */}
+                                {isFail && (
+                                  <span className="text-xs font-medium text-rose-600 mt-1">
+                                    Kích thước nhập vào không phù hợp với drive <strong>{d.name || "Unknown"}</strong> vì yêu cầu thể tích tối thiểu là <strong>{minV.toLocaleString()} mm³</strong>.
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  <div className="space-y-2 pt-4 border-t">
+                    <label className="text-sm font-medium flex justify-between">
+                      Variant Images
+                      <span className="text-slate-400 font-normal">{previewImages.length} selected</span>
+                    </label>
+                    <input ref={previewInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePreviewImagesChange} />
+                    
+                    <div className="flex flex-wrap gap-3">
+                      {previewLocalUrls.map((url, i) => (
+                        <div key={i} className="relative group w-20 h-20 rounded-md overflow-hidden border bg-muted shadow-sm">
+                          <img src={url} alt={`preview-${i}`} className="object-cover w-full h-full" />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button type="button" onClick={() => handleRemovePreviewImage(i)} className="bg-white/90 rounded-full p-1.5 text-rose-600 hover:bg-white"><Trash2 className="h-3.5 w-3.5" /></button>
+                          </div>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => previewInputRef.current?.click()} className="w-20 h-20 rounded-md border-2 border-dashed flex flex-col items-center justify-center gap-1 text-slate-500 hover:border-brand hover:text-brand transition-colors bg-slate-50">
+                        <ImagePlus className="h-5 w-5" /> <span className="text-[10px] font-medium">Add</span>
+                      </button>
+                    </div>
+                  </div>
+
                 </div>
               </div>
 
@@ -272,7 +389,7 @@ export function WizardCreateVariant({
                 <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-slate-200 text-sm flex items-center justify-center">2</div> Inventory</h3>
                 <div className="p-4 border rounded-lg bg-white">
                   <label className="text-sm font-medium block mb-2">{isCreateMode ? 'Initial Quantity' : 'Stock Quantity'}</label>
-                  <Input type="number" value={draftVariant.initialStock} onChange={e => setDraftVariant({ ...draftVariant, initialStock: Number(e.target.value) })} />
+                  <Input type="number" min={0} value={draftVariant.initialStock} onChange={e => setDraftVariant({ ...draftVariant, initialStock: Number(e.target.value) })} />
                 </div>
               </div>
             </div>
@@ -380,11 +497,11 @@ export function WizardCreateVariant({
             </div>
           </div>
 
-          {/* === FOOTER BUTTONS THAY ĐỔI THEO MODE === */}
+          {/* === FOOTER BUTTONS === */}
           <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t mt-8">
             {isCreateMode ? (
               <>
-                <Button type="button" variant="outline" className="flex-1 border-brand text-brand hover:bg-brand/5" onClick={handleSubmit}>
+                <Button type="button" variant="outline" className="flex-1 border-brand text-brand hover:bg-brand/5" onClick={handleSubmit} disabled={!isVolumeValid}>
                   <Plus className="w-4 h-4 mr-2" /> Save this Variant to pending list
                 </Button>
 
@@ -397,7 +514,7 @@ export function WizardCreateVariant({
                 <Button type="button" variant="outline" onClick={onCancelEdit} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
+                <Button type="button" onClick={handleSubmit} disabled={isSubmitting || !isVolumeValid}>
                   <Save className="w-4 h-4 mr-2" /> {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>

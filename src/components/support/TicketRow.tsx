@@ -36,7 +36,7 @@ export function TicketRow({
   const { data: deliveriesRes } = useDeliveryTrackings(ticket.orderId, true);
 
   const supportShipment = deliveriesRes?.data?.find(
-    (d: any) => d.type === 'Support' && d.supportTicketId === ticket.id
+    (d: any) => (d.type === 'Return' || d.type === 'Resend') && d.supportTicketId === ticket.id
   );
 
   const canDelete = ticket.status === 'Open';
