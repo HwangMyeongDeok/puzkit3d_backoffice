@@ -5,7 +5,7 @@ import type {
   UpdateFormulaPayload, 
   CreateValidationPayload, 
   UpdateValidationPayload, 
-  CalculateFormulaPayload 
+  CalculateFormulaRequestDto, 
 } from "@/services/formulaApi"; // Chỉnh lại đường dẫn import file type của bạn
 
 // ==========================================
@@ -130,12 +130,11 @@ export const useDeleteFormulaValidation = (formulaId: string) => {
 // ==========================================
 export const useCalculateFormula = () => {
   return useMutation({
-    mutationFn: ({ formulaCode, payload }: { formulaCode: string; payload: CalculateFormulaPayload }) => 
+    mutationFn: ({ formulaCode, payload }: { formulaCode: string; payload: CalculateFormulaRequestDto }) => 
       formulaApi.calculate(formulaCode, payload),
-    // Không cần Invalidate Queries vì API này không làm thay đổi Database
     onError: (error: any) => {
-      console.error("Lỗi test tính toán:", error);
-      toast.error(error.response?.data?.message || "Lỗi khi tính toán thử!");
+      console.error("Error:", error);
+      toast.error(error.response?.data?.message || "error when calculating formula");
     },
   });
 };

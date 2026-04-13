@@ -40,20 +40,17 @@ export interface UpdateValidationPayload {
 }
 
 // Payload khi Test Tính toán (tất cả đều optional tùy công thức)
-export interface CalculateFormulaPayload {
-  capabilityId?: string;
+// Request Body DTO
+export interface CalculateFormulaRequestDto {
   capabilityIds?: string[];
-  materialId?: string;
   materialIds?: string[];
-  topicId?: string;
   topicIds?: string[];
-  assemblyMethodId?: string;
   assemblyMethodIds?: string[];
   pieceCount?: number;
 }
 
-// Kết quả trả về sau khi tính toán
-export interface CalculateFormulaResponse {
+// Response DTO
+export interface CalculateFormulaResponseDto {
   rawValue: number;
   validationOutput: string;
 }
@@ -94,8 +91,8 @@ getFormulas: async () => {
   // ==========================================
   // CALCULATOR (TEST)
   // ==========================================
-  calculate: async (formulaCode: string, payload: CalculateFormulaPayload) => {
-    const { data } = await axiosInstance.post<CalculateFormulaResponse>(
+  calculate: async (formulaCode: string, payload: CalculateFormulaRequestDto) => {
+    const { data } = await axiosInstance.post<CalculateFormulaResponseDto>(
       `/formulas/${formulaCode}/calculate`, 
       payload
     );

@@ -15,7 +15,7 @@ const extractItems = <T,>(response: ApiResponse<T>): T[] => {
 export const masterDataApi = {
   // ─── TOPICS ───
   getTopics: async (): Promise<Topic[]> => {
-    const response = await axiosInstance.get<ApiResponse<Topic>>('/topics', { params: { pageNumber: 1, pageSize: 100 } });
+    const response = await axiosInstance.get<ApiResponse<Topic>>('/topics', { params: { pageNumber: 1, pageSize: 100, ascending: true } });
     return extractItems(response.data);
   },
   createTopic: async (data: Partial<Topic>) => axiosInstance.post('/topics', data),
@@ -24,7 +24,7 @@ export const masterDataApi = {
 
   // ─── MATERIALS ───
   getMaterials: async (): Promise<Material[]> => {
-    const response = await axiosInstance.get<ApiResponse<Material>>('/materials', { params: { pageNumber: 1, pageSize: 100 } });
+    const response = await axiosInstance.get<ApiResponse<Material>>('/materials', { params: { pageNumber: 1, pageSize: 100, ascending: true } });
     return extractItems(response.data);
   },
   createMaterial: async (data: Partial<Material>) => axiosInstance.post('/materials', data),
@@ -33,7 +33,7 @@ export const masterDataApi = {
 
   // ─── CAPABILITIES ───
   getCapabilities: async (): Promise<Capability[]> => {
-    const response = await axiosInstance.get<ApiResponse<Capability>>('/capabilities', { params: { pageNumber: 1, pageSize: 100 } });
+    const response = await axiosInstance.get<ApiResponse<Capability>>('/capabilities', { params: { pageNumber: 1, pageSize: 100, ascending: true } });
     return extractItems(response.data);
   },
   createCapability: async (data: Partial<Capability>) => axiosInstance.post('/capabilities', data),
@@ -42,7 +42,7 @@ export const masterDataApi = {
 
   // ─── ASSEMBLY METHODS ───
   getAssemblyMethods: async (): Promise<AssemblyMethod[]> => {
-    const response = await axiosInstance.get<ApiResponse<AssemblyMethod>>('/assembly-methods', { params: { pageNumber: 1, pageSize: 100 } });
+    const response = await axiosInstance.get<ApiResponse<AssemblyMethod>>('/assembly-methods', { params: { pageNumber: 1, pageSize: 100, ascending: true } });
     return extractItems(response.data);
   },
   createAssemblyMethod: async (data: Partial<AssemblyMethod>) => axiosInstance.post('/assembly-methods', data),

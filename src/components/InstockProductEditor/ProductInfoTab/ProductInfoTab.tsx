@@ -10,18 +10,27 @@ import { Form } from '@/components/ui/form';
 import { Loader2, ArrowRight } from 'lucide-react';
 
 import type { DifficultLevel } from '@/types/types';
-import {
-  useTopics,
-  useMaterials,
-  useCapabilities,
-  useAssemblyMethods,
-} from '@/hooks/useMasterDataQueries';
-import { productFormSchema, type ProductFormValues } from '@/pages/manager/product-editor/schema';
 
+// SỬ DỤNG FILE QUERIES MỚI
+import {
+  useAllTopics,
+  useCatalogList,
+  useFilteredCapabilities,
+  useActiveDrivesByCapabilities,
+} from '@/hooks/useCatalogQueries'; 
+import * as catalogApi from '@/services/catalogApi'; 
+// IMPORT THÊM TYPE TỪ CATALOG API
+import type { 
+  MaterialItem, 
+  FilterBriefItem, 
+  CapabilityDriveBriefItem 
+} from '@/services/catalogApi';
+import { useCalculateFormula } from '@/hooks/useFormulaQueries';
+
+import { productFormSchema, type ProductFormValues } from '@/pages/manager/product-editor/schema';
 import { BasicInfoCard } from './BasicInfoCard';
 import { ImagesCard } from './ImagesCard';
 import { SpecificationsCard } from './SpecificationsCard';
-
 
 export interface ProductFiles {
   thumbnail: File | null;
@@ -41,47 +50,29 @@ export function ProductInfoTab({
   initialFiles,
   onNextStep,
 }: ProductInfoTabProps) {
-  const { data: topics, isLoading: isTopicsLoading } = useTopics();
-  const { data: materials, isLoading: isMaterialsLoading } = useMaterials();
-  const { data: capabilities, isLoading: isCapabilitiesLoading } = useCapabilities();
-  const { data: assemblyMethods, isLoading: isAssemblyMethodsLoading } = useAssemblyMethods();
-
-  const isMasterDataLoading =
-  isTopicsLoading || isMaterialsLoading || isCapabilitiesLoading || isAssemblyMethodsLoading;
-
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(initialFiles?.thumbnail || null);
-  const [thumbnailLocalPreview, setThumbnailLocalPreview] = useState<string | null>(null);
-  const [thumbnailError, setThumbnailError] = useState<string | null>(null);
+  // 1. Data tĩnh (Luôn load) - SỬ DỤNG HOOK MỚI
+  const { data: topicsData, isLoading: isTopicsLoading } = useAllTopics(true);
+  const topics = topicsData?.items || [];
   
-  const [previewFiles, setPreviewFiles] = useState<File[]>(initialFiles?.previews || []);
-  const [previewLocalPreviews, setPreviewLocalPreviews] = useState<string[]>([]);
-
-  const thumbnailInputRef = useRef<HTMLInputElement>(null);
-  const previewInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (thumbnailFile) setThumbnailLocalPreview(URL.createObjectURL(thumbnailFile));
-    if (previewFiles.length > 0) {
-      setPreviewLocalPreviews(previewFiles.map(f => URL.createObjectURL(f)));
-    }
-    return () => {
-      if (thumbnailLocalPreview) URL.revokeObjectURL(thumbnailLocalPreview);
-      previewLocalPreviews.forEach(url => URL.revokeObjectURL(url));
-    };
-  }, []);
+  // Dùng useCatalogList cho material (Giả sử lấy 100 item không phân trang)
+  const { data: materialsData, isLoading: isMaterialsLoading } = useCatalogList('materials', 1, 100, '', true);
+  
+  // Trích xuất mảng dữ liệu và định nghĩa kiểu rõ ràng là MaterialItem[]
+  const materials = (Array.isArray(materialsData) ? materialsData : materialsData?.items || []) as MaterialItem[];
 
   const defaultValues: ProductFormValues = {
     slug: initialData?.slug || '',
     name: initialData?.name || '',
     description: initialData?.description || '',
     difficultLevel: (initialData?.difficultLevel as DifficultLevel) || 'Basic',
-    estimatedBuildTime: initialData?.estimatedBuildTime || 1,
-    totalPieceCount: initialData?.totalPieceCount || 1,
+    estimatedBuildTime: initialData?.estimatedBuildTime || 0,
+    totalPieceCount: initialData?.totalPieceCount || 0,
     thumbnailUrl: initialData?.thumbnailUrl || '',
     topicId: initialData?.topicId || '',
     materialId: initialData?.materialId || '',
-    assemblyMethodId: initialData?.assemblyMethodId || '',
     capabilityIds: initialData?.capabilityIds || [],
+    driveDetails: initialData?.driveDetails || [],
+    assemblyMethodIds: initialData?.assemblyMethodIds || [],
     previewAsset: initialData?.previewAsset || {},
     isActive: initialData?.isActive ?? true,
   };
@@ -91,6 +82,120 @@ export function ProductInfoTab({
     values: defaultValues,
     mode: 'onTouched',
   });
+
+  // Quan sát các giá trị form để trigger API tuần tự
+  const watchTopicId = form.watch('topicId');
+  const watchMaterialId = form.watch('materialId');
+  const watchCapabilityIds = form.watch('capabilityIds') || [];
+  const watchAssemblyMethodIds = form.watch('assemblyMethodIds') || [];
+  const watchPieceCount = form.watch('totalPieceCount');
+
+  // 2. Load Capabilities (dựa trên topic & material)
+  const { data: rawCapabilities } = useFilteredCapabilities(
+    watchTopicId || '', 
+    watchMaterialId || ''
+  );
+
+  // 3. Load Drives (dựa trên capabilities, có lọc trùng)
+  const { data: rawDrives } = useActiveDrivesByCapabilities(watchCapabilityIds);
+  // Lọc trùng ID và định nghĩa kiểu rõ ràng
+  const drives = Array.from(
+    new Map((rawDrives || []).map((d: CapabilityDriveBriefItem) => [d.id, d])).values()
+  );
+
+  // 4. Load Assembly Methods (gọi API cho mỗi capability + material, có lọc trùng)
+  const [assemblyMethods, setAssemblyMethods] = useState<FilterBriefItem[]>([]);
+  const [isAssemblyMethodsLoading, setIsAssemblyMethodsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!watchMaterialId || watchCapabilityIds.length === 0) {
+      setAssemblyMethods([]);
+      return;
+    }
+    const fetchAssemblyMethods = async () => {
+      setIsAssemblyMethodsLoading(true);
+      try {
+        const promises = watchCapabilityIds.map(capId => 
+          catalogApi.getActiveAssemblyMethodsForCapabilityAndMaterial(capId, watchMaterialId)
+        );
+        const results = await Promise.all(promises);
+        
+        // Vì API trả về mảng FilterBriefItem[], ta chỉ cần flatMap gộp lại
+        const combined = results.flatMap((res) => res);
+        
+        // Lọc trùng lặp id
+        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+        setAssemblyMethods(unique);
+      } catch (error) {
+        console.error("Error fetching assembly methods", error);
+      } finally {
+        setIsAssemblyMethodsLoading(false);
+      }
+    };
+    fetchAssemblyMethods();
+  }, [watchMaterialId, JSON.stringify(watchCapabilityIds)]);
+
+
+  // 5. Tự động tính Difficulty và Build Time
+  const calculateMutation = useCalculateFormula();
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  useEffect(() => {
+    const runCalculation = async () => {
+      if (watchPieceCount > 4 && watchTopicId && watchMaterialId && watchCapabilityIds.length > 0 && watchAssemblyMethodIds.length > 0) {
+        setIsCalculating(true);
+        const payload = {
+          topicIds: [watchTopicId],
+          materialIds: [watchMaterialId],
+          capabilityIds: watchCapabilityIds,
+          assemblyMethodIds: watchAssemblyMethodIds,
+          pieceCount: Number(watchPieceCount)
+        };
+
+     try {
+          // Gọi song song 2 API tính toán
+          const [diffRes, timeRes] = await Promise.all([
+            calculateMutation.mutateAsync({ formulaCode: 'DIFFICULTY_CALCULATION', payload }),
+            calculateMutation.mutateAsync({ formulaCode: 'BUILD_TIME_CALCULATION', payload })
+          ]);
+          
+          // 1. Difficulty thì lấy chữ (validationOutput)
+          form.setValue('difficultLevel', diffRes.validationOutput as DifficultLevel);
+          
+          // 2. Build Time thì LUÔN LUÔN lấy số (rawValue)
+          form.setValue('estimatedBuildTime', timeRes.rawValue);
+
+        } catch (error) {
+          console.error("Calculate error:", error);
+        } finally {
+          setIsCalculating(false);
+        }
+      }
+    };
+
+    // Debounce 500ms để tránh call API liên tục khi gõ pieceCount
+    const timeoutId = setTimeout(runCalculation, 500);
+    return () => clearTimeout(timeoutId);
+  }, [watchPieceCount, watchTopicId, watchMaterialId, JSON.stringify(watchCapabilityIds), JSON.stringify(watchAssemblyMethodIds)]);
+
+
+  // --- Logic Hình ảnh ---
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(initialFiles?.thumbnail || null);
+  const [thumbnailLocalPreview, setThumbnailLocalPreview] = useState<string | null>(null);
+  const [thumbnailError, setThumbnailError] = useState<string | null>(null);
+  const [previewFiles, setPreviewFiles] = useState<File[]>(initialFiles?.previews || []);
+  const [previewLocalPreviews, setPreviewLocalPreviews] = useState<string[]>([]);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const previewInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (thumbnailFile) setThumbnailLocalPreview(URL.createObjectURL(thumbnailFile));
+    if (previewFiles.length > 0) setPreviewLocalPreviews(previewFiles.map(f => URL.createObjectURL(f)));
+    return () => {
+      if (thumbnailLocalPreview) URL.revokeObjectURL(thumbnailLocalPreview);
+      previewLocalPreviews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -146,13 +251,7 @@ export function ProductInfoTab({
     onNextStep(finalData, filesToPass);
   };
 
-  const existingPreviewAsset = form.watch('previewAsset') as Record<string, string> | undefined;
-  const existingPreviews = Object.entries(existingPreviewAsset || {}).filter(
-    ([, v]) => typeof v === 'string' && (v.startsWith('http') || v.includes('/'))
-  );
-  const totalPreviewCount = existingPreviews.length + previewFiles.length;
-  const canAddMorePreviews = totalPreviewCount < 3;
-  const displayThumbnail = thumbnailLocalPreview || form.watch('thumbnailUrl') || null;
+  const isMasterDataLoading = isTopicsLoading || isMaterialsLoading;
 
   if (isMasterDataLoading) {
     return (
@@ -162,12 +261,30 @@ export function ProductInfoTab({
     );
   }
 
+  const existingPreviewAsset = form.watch('previewAsset') as Record<string, string> | undefined;
+  const existingPreviews = Object.entries(existingPreviewAsset || {}).filter(
+    ([, v]) => typeof v === 'string' && (v.startsWith('http') || v.includes('/'))
+  );
+  const totalPreviewCount = existingPreviews.length + previewFiles.length;
+  const canAddMorePreviews = totalPreviewCount < 3;
+  const displayThumbnail = thumbnailLocalPreview || form.watch('thumbnailUrl') || null;
+
   return (
     <div className="space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           
           <BasicInfoCard form={form} isCreateMode={isCreateMode} />
+
+          <SpecificationsCard 
+            form={form}
+            topics={topics} 
+            materials={materials}
+            capabilities={rawCapabilities}
+            drives={drives}
+            assemblyMethods={assemblyMethods}
+            isCalculating={isCalculating || isAssemblyMethodsLoading}
+          />
 
           <ImagesCard 
             isCreateMode={isCreateMode}
@@ -184,14 +301,6 @@ export function ProductInfoTab({
             handlePreviewFilesChange={handlePreviewFilesChange}
             handleRemoveExistingPreview={handleRemoveExistingPreview}
             handleRemoveNewPreview={handleRemoveNewPreview}
-          />
-
-          <SpecificationsCard 
-            form={form}
-            topics={topics}
-            materials={materials}
-            assemblyMethods={assemblyMethods}
-            capabilities={capabilities}
           />
 
           <div className="flex gap-3 justify-end">

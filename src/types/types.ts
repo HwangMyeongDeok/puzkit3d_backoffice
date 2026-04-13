@@ -76,8 +76,9 @@ export interface InstockProductDto {
   description: string | null;
   topicId: string;
   materialId: string;
-  assemblyMethodId: string;
+  assemblyMethodIds: string[];
   capabilityIds: string[];
+  driveDetails: DriveDetailDto[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -124,18 +125,24 @@ export interface UpdateInstockPriceRequestDto {
   isActive?: boolean;
 }
 
+export interface DriveDetailDto {
+  driveId: string;
+  quantity: number;
+}
+
 export interface CreateInstockProductRequestDto {
   slug: string;
   name: string;
   totalPieceCount: number;
-  difficultLevel: DifficultLevel;
+  difficultLevel: DifficultLevel; // Bạn có thể giữ nguyên enum này nếu nó đã map đúng với string backend cần
   estimatedBuildTime: number;
   thumbnailUrl: string;
-  previewAsset: Record<string, any>;
+  previewAsset: string[]; // Cập nhật thành mảng string
   topicId: string;
-  assemblyMethodId: string;
-  capabilityIds: string[];
   materialId: string;
+  capabilityIds: string[];
+  assemblyMethodIds: string[]; // Cập nhật tên và kiểu dữ liệu thành mảng
+  driveDetails: DriveDetailDto[]; // Thêm trường mới
   description: string;
   isActive: boolean;
 }
@@ -247,6 +254,7 @@ export interface CreateInstockProductVariantRequestDto {
   assembledLengthMm: number;
   assembledWidthMm: number;
   assembledHeightMm: number;
+  previewImages?: string[]; // Thêm trường này để lưu file ảnh preview mới upload cho mỗi variant
   isActive: boolean;
 }
 
@@ -407,7 +415,7 @@ export interface InstockOrderDeliveryTrackingDto {
   supportTicketId: string | null;
   deliveryOrderCode: string | null;
   status: InstockOrderStatus;
-  type: 'Original' | 'Support';
+  type: 'Original' | 'Return' | 'Resend';
   note: string | null;
   handOverImageUrl: string | null;
   expectedDeliveryDate: string | null;

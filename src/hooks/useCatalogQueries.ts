@@ -12,6 +12,10 @@ export const catalogKeys = {
   capabilityDriveAssignments: (capabilityId: string) => [...catalogKeys.all, 'capability-drives', capabilityId] as const,
   activeDrivesByCapabilities: (capabilityIds: string[]) => 
     [...catalogKeys.all, 'active-drives-by-capabilities', [...capabilityIds].sort().join(',')] as const,
+  filteredCapabilities: (topicId: string, materialId: string) => 
+    [...catalogKeys.all, 'filtered-capabilities', topicId, materialId] as const,
+  filteredAssemblyMethods: (capabilityId: string, materialId: string) => 
+    [...catalogKeys.all, 'filtered-assembly-methods', capabilityId, materialId] as const,
 };
 
 // ─── QUERIES (Lấy danh sách Catalog) ───
@@ -27,7 +31,7 @@ export const useCatalogList = (
 ) =>
   useQuery({
     queryKey: catalogKeys.list(resource, { pageNumber, pageSize, searchTerm, isActive, ascending }),
-    queryFn: () => catalogApi.getCatalogList(resource, pageNumber, pageSize, searchTerm, isActive, ascending),
+    queryFn: () => catalogApi.getCatalogList(resource, pageNumber, pageSize, ascending, searchTerm, isActive),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -41,7 +45,7 @@ export const useTopics = (
 ) =>
   useQuery({
     queryKey: catalogKeys.list('topics', { pageNumber, pageSize, searchTerm, isActive, ascending }),
-    queryFn: () => catalogApi.getTopics(pageNumber, pageSize, searchTerm, isActive, ascending),
+    queryFn: () => catalogApi.getTopics(pageNumber, pageSize, ascending, searchTerm, isActive),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -252,5 +256,27 @@ export const useDeleteCapabilityMaterialFromAssembly = () => {
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: catalogKeys.assemblyMethodAssignments(variables.assemblyId) });
     },
+  });
+};
+
+// Hook lấy danh sách active capabilities dựa trên topic và material
+export const useFilteredCapabilities = (topicId: string, materialId: string) => {
+  return useQuery({
+    queryKey: catalogKeys.filteredCapabilities(topicId, materialId),
+    queryFn: () => catalogApi.getActiveCapabilitiesForTopicAndMaterial(topicId, materialId),
+    // Chỉ gọi API khi đã có đầy đủ topicId và materialId
+    enabled: !!topicId && !!materialId, 
+    staleTime: 5 * 60 * 1000, // Cache 5 phút
+  });
+};
+
+// Hook lấy danh sách active assembly methods dựa trên capability và material
+export const useFilteredAssemblyMethods = (capabilityId: string, materialId: string) => {
+  return useQuery({
+    queryKey: catalogKeys.filteredAssemblyMethods(capabilityId, materialId),
+    queryFn: () => catalogApi.getActiveAssemblyMethodsForCapabilityAndMaterial(capabilityId, materialId),
+    // Chỉ gọi API khi đã có đầy đủ capabilityId và materialId
+    enabled: !!capabilityId && !!materialId, 
+    staleTime: 5 * 60 * 1000, // Cache 5 phút
   });
 };

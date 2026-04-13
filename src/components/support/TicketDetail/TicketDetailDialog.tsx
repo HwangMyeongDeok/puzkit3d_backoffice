@@ -36,7 +36,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange, onShipmentCre
   // --- State ---
   const [handOverDialogTrackingId, setHandOverDialogTrackingId] = useState<string | null>(null);
 
-  const supportShipment = deliveriesRes?.data?.find((d: DeliveryTracking) => d.type === 'Support' && d.supportTicketId === ticket?.id);
+  const supportShipment = deliveriesRes?.data?.find((d: DeliveryTracking) => (d.type === 'Return' || d.type === 'Resend') && d.supportTicketId === ticket?.id);
 
   // --- Handlers ---
   const handleStatusChange = async (status: TicketStatus) => {

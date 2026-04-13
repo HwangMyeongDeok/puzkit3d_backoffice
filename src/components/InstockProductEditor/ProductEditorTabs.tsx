@@ -33,8 +33,10 @@ export function ProductEditorTabs({
         thumbnailUrl: product.thumbnailUrl ?? undefined,
         topicId: product.topicId ?? undefined,
         materialId: product.materialId ?? undefined,
-        assemblyMethodId: product.assemblyMethodId ?? undefined,
+        // Cập nhật mảng thay vì string số ít
         capabilityIds: product.capabilityIds || [],
+        assemblyMethodIds: product.assemblyMethodIds || [],
+        driveDetails: product.driveDetails || [],
         previewAsset: typeof product.previewAsset === 'object' && !Array.isArray(product.previewAsset) ? product.previewAsset : {},
         isActive: product.isActive,
       };
@@ -51,7 +53,6 @@ export function ProductEditorTabs({
   const handleInfoNext = (data: ProductFormValues, files: ProductFiles) => {
     setProductDraftData(data);
     setProductDraftFiles(files);
-    
     setActiveTab('variants');
   };
 
@@ -60,21 +61,14 @@ export function ProductEditorTabs({
   };
 
   return (
-    <Tabs
-      value={activeTab}
-      onValueChange={(v) => setActiveTab(v as 'info' | 'variants')}
-    >
+    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'info' | 'variants')}>
+      {/* ... Phần render TabsList giữ nguyên ... */}
       <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
         <TabsTrigger value="info" className="gap-2">
           <Settings className="h-4 w-4" />
           <span className="hidden sm:inline">General Info</span>
         </TabsTrigger>
-
-        <TabsTrigger
-          value="variants"
-          disabled={isCreateMode && !isInfoCompleted}
-          className="gap-2"
-        >
+        <TabsTrigger value="variants" disabled={isCreateMode && !isInfoCompleted} className="gap-2">
           <Package className="h-4 w-4" />
           <span className="hidden sm:inline">Variants</span>
         </TabsTrigger>

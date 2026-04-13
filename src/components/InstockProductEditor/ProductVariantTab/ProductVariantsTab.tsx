@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus, Edit, PowerOff, CheckCircle, Loader2, Package } from 'lucide-react';
+import { useQueries } from '@tanstack/react-query'; // IMPORT THÊM USEQUERIES
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -21,9 +22,14 @@ import { useVariantsWithInventory, type VariantWithInventory } from '@/hooks/use
 import { useCreateInventory, useUpdateInventory } from '@/hooks/useInventoryMutations';
 import { useCreatePriceDetail, usePriceDetailsByVariantId, useUpdatePriceDetail, useDeletePriceDetail } from '@/hooks/useInstockPriceDetailQueries';
 
+// CẬP NHẬT IMPORT: Đưa catalogKeys và catalogApi vào để dùng cho useQueries
+// Nhớ check lại đường dẫn thực tế trong project của bạn nhé!
+import { catalogKeys } from '@/hooks/useCatalogQueries'; 
+import * as catalogApi from '@/services/catalogApi';
+
 import { handleErrorToast } from '@/lib/error-handler';
 import { uploadApi } from '@/services/uploadApi';
-import type { ProductFormValues, VariantFormValues } from '@/pages/manager/product-editor/schema';
+import type { ProductFormValues } from '@/pages/manager/product-editor/schema';
 import type { ProductFiles } from '../ProductInfoTab/ProductInfoTab';
 
 import { PreviewSummary, type VariantDraft, type VariantPriceDraft } from './PreviewSummary';
@@ -57,7 +63,6 @@ export function ProductVariantsTab({
   const createInventoryMutation = useCreateInventory();
   const toggleMutation = useToggleInstockProductVariantStatus();
   const createPriceDetailMutation = useCreatePriceDetail();
-  // useUpdateInventory cần productId khi khởi tạo, chỉ dùng trong Edit mode
   const updateInventoryMutation = useUpdateInventory(productId || '');
 
   const [localVariantsList, setLocalVariantsList] = useState<VariantDraft[]>([]);
@@ -71,12 +76,41 @@ export function ProductVariantsTab({
   const [editingVariant, setEditingVariant] = useState<VariantWithInventory | null>(null);
   const [variantToDeactivate, setVariantToDeactivate] = useState<VariantWithInventory | null>(null);
 
-  // Fetch price details cho variant đang edit
   const { data: editingPriceDetails } = usePriceDetailsByVariantId(editingVariant?.id);
   const updatePriceDetailMutation = useUpdatePriceDetail();
   const deletePriceDetailMutation = useDeletePriceDetail();
 
-  // Chuyển đổi VariantWithInventory -> VariantDraft để truyền vào WizardCreateVariant
+  // =====================================================================
+  // LẤY VÀ LỌC TRÙNG LẶP DRIVES DỰA TRÊN CAPABILITIES TỪ TAB 1 BẰNG useQueries
+  // =====================================================================
+  const capabilityIds = productDraftData?.capabilityIds || [];
+
+  const drivesQueries = useQueries({
+    queries: capabilityIds.map((capId: string) => ({
+      queryKey: catalogKeys.capabilityDriveAssignments(capId),
+      queryFn: () => catalogApi.getAssignedDrivesForCapability(capId),
+      enabled: !!capId,
+    }))
+  });
+
+  const validDrives = useMemo(() => {
+    const uniqueDrivesMap = new Map();
+
+    drivesQueries.forEach((query) => {
+      // Đảm bảo API call thành công và trả về một mảng
+      if (query.isSuccess && Array.isArray(query.data)) {
+        query.data.forEach((drive: any) => {
+          if (!uniqueDrivesMap.has(drive.id)) {
+            uniqueDrivesMap.set(drive.id, drive);
+          }
+        });
+      }
+    });
+
+    return Array.from(uniqueDrivesMap.values());
+  }, [drivesQueries]);
+  // =====================================================================
+
   const editingVariantDraft = useMemo<VariantDraft | undefined>(() => {
     if (!editingVariant) return undefined;
     const prices: VariantPriceDraft[] = (editingPriceDetails || []).map(pd => ({
@@ -93,6 +127,7 @@ export function ProductVariantsTab({
       initialStock: editingVariant.stockQuantity ?? 0,
       isActive: editingVariant.isActive,
       prices,
+      previewImages: [], // Handle existing images if needed for Edit mode
     };
   }, [editingVariant, editingPriceDetails]);
 
@@ -108,7 +143,7 @@ export function ProductVariantsTab({
       const finalPreviewAsset = { ...(productDraftData.previewAsset || {}) } as Record<string, string>;
 
       if (productDraftFiles) {
-        toast.loading('Uploading images...', { id: toastId });
+        toast.loading('Uploading main product images...', { id: toastId });
         const uploadTasks: Promise<string>[] = [];
 
         if (productDraftFiles.thumbnail) {
@@ -132,16 +167,26 @@ export function ProductVariantsTab({
         }
       }
 
-      toast.loading('Creating product...', { id: toastId });
+      toast.loading('Saving product base data...', { id: toastId });
       const newProductId = await createProductMutation.mutateAsync({
         ...productDraftData,
         thumbnailUrl: finalThumbnailUrl,
         previewAsset: Object.values(finalPreviewAsset),
       } as any);
 
-      toast.loading('Creating variants, inventory and prices...', { id: toastId });
+      toast.loading('Creating variants and uploading variant images...', { id: toastId });
 
       for (const v of variantsList) {
+        let variantPreviewUrls: string[] = [];
+
+        // Upload Preview Images riêng cho từng Variant
+        if (v.previewImages && v.previewImages.length > 0) {
+          const variantUploadTasks = v.previewImages.map((file: File, i: number) => 
+            uploadApi.uploadFileToS3(file, 'instock-products', `${slug}/variant_${v.color}_${i}_${Date.now()}`)
+          );
+          variantPreviewUrls = await Promise.all(variantUploadTasks);
+        }
+
         const newVariantId = await createVariantMutation.mutateAsync({
           productId: newProductId,
           data: {
@@ -149,6 +194,7 @@ export function ProductVariantsTab({
             assembledLengthMm: v.assembledLengthMm,
             assembledWidthMm: v.assembledWidthMm,
             assembledHeightMm: v.assembledHeightMm,
+            previewImages: variantPreviewUrls, // Truyền mảng URLs đã upload
             isActive: v.isActive
           },
         });
@@ -169,7 +215,7 @@ export function ProductVariantsTab({
         }
       }
 
-      toast.success('Successfully created product.', { id: toastId });
+      toast.success('Successfully created product & variants.', { id: toastId });
       navigate('/instock-products');
 
     } catch (error) {
@@ -180,18 +226,17 @@ export function ProductVariantsTab({
     }
   };
 
-  // Handler cho WizardCreateVariant ở chế độ EDIT
   const handleWizardEditSave = async (updatedData: VariantDraft) => {
     if (!productId || !editingVariant) return;
     try {
-      // === API 1: Update variant info (chỉ gửi field thay đổi) ===
       const variantUpdatePayload: Record<string, any> = {};
       if (updatedData.color !== editingVariant.color) variantUpdatePayload.color = updatedData.color;
       if (updatedData.assembledLengthMm !== editingVariant.assembledLengthMm) variantUpdatePayload.assembledLengthMm = updatedData.assembledLengthMm;
       if (updatedData.assembledWidthMm !== editingVariant.assembledWidthMm) variantUpdatePayload.assembledWidthMm = updatedData.assembledWidthMm;
       if (updatedData.assembledHeightMm !== editingVariant.assembledHeightMm) variantUpdatePayload.assembledHeightMm = updatedData.assembledHeightMm;
-      // Chỉ gửi isActive khi THỰC SỰ thay đổi — backend reject nếu trạng thái giống cũ
       if (updatedData.isActive !== editingVariant.isActive) variantUpdatePayload.isActive = updatedData.isActive;
+
+      // Cần thêm logic upload/update mảng string cho previewImages nếu làm Edit Mode ở đây
 
       if (Object.keys(variantUpdatePayload).length > 0) {
         await updateVariantMutation.mutateAsync({
@@ -201,64 +246,36 @@ export function ProductVariantsTab({
         });
       }
 
-      // === API 2: Update inventory quantity (API riêng) ===
+      // Logic Update Inventory
       const currentStock = editingVariant.stockQuantity ?? 0;
       const newStock = updatedData.initialStock;
       if (newStock !== currentStock) {
         if (editingVariant.hasNoInventory) {
-          // Chưa có bản ghi kho → dùng POST để tạo mới
-          await createInventoryMutation.mutateAsync({
-            productId,
-            variantId: editingVariant.id,
-            quantity: newStock,
-          });
+          await createInventoryMutation.mutateAsync({ productId, variantId: editingVariant.id, quantity: newStock });
         } else {
-          // Đã có bản ghi kho → dùng PUT để cập nhật
-          await updateInventoryMutation.mutateAsync({
-            variantId: editingVariant.id,
-            quantity: newStock,
-          });
+          await updateInventoryMutation.mutateAsync({ variantId: editingVariant.id, quantity: newStock });
         }
       }
 
-      // === API 3: Đồng bộ price details (API riêng) ===
+      // Logic Sync Prices (Giữ nguyên)
       const existingPrices = editingPriceDetails || [];
       const draftPrices = updatedData.prices;
 
-      // 3a. Tìm prices cần XÓA (có trong existing nhưng không có trong draft)
-      const pricesToDelete = existingPrices.filter(
-        ep => !draftPrices.some(dp => dp.priceId === ep.priceId)
-      );
-      for (const pd of pricesToDelete) {
-        await deletePriceDetailMutation.mutateAsync(pd.id);
-      }
+      const pricesToDelete = existingPrices.filter(ep => !draftPrices.some(dp => dp.priceId === ep.priceId));
+      for (const pd of pricesToDelete) { await deletePriceDetailMutation.mutateAsync(pd.id); }
 
-      // 3b. Tìm prices cần THÊM MỚI (có trong draft nhưng không có trong existing)
-      const pricesToCreate = draftPrices.filter(
-        dp => !existingPrices.some(ep => ep.priceId === dp.priceId)
-      );
+      const pricesToCreate = draftPrices.filter(dp => !existingPrices.some(ep => ep.priceId === dp.priceId));
       for (const dp of pricesToCreate) {
-        await createPriceDetailMutation.mutateAsync({
-          variantId: editingVariant.id,
-          priceId: dp.priceId,
-          unitPrice: dp.unitPrice,
-          isActive: true,
-        });
+        await createPriceDetailMutation.mutateAsync({ variantId: editingVariant.id, priceId: dp.priceId, unitPrice: dp.unitPrice, isActive: true });
       }
 
-      // 3c. Tìm prices cần CẬP NHẬT (có trong cả 2, nhưng giá thay đổi)
       const pricesToUpdate = draftPrices.filter(dp => {
         const existing = existingPrices.find(ep => ep.priceId === dp.priceId);
         return existing && existing.unitPrice !== dp.unitPrice;
       });
       for (const dp of pricesToUpdate) {
         const existing = existingPrices.find(ep => ep.priceId === dp.priceId);
-        if (existing) {
-          await updatePriceDetailMutation.mutateAsync({
-            id: existing.id,
-            data: { unitPrice: dp.unitPrice },
-          });
-        }
+        if (existing) { await updatePriceDetailMutation.mutateAsync({ id: existing.id, data: { unitPrice: dp.unitPrice } }); }
       }
 
       toast.success('Variant updated successfully!');
@@ -296,6 +313,7 @@ export function ProductVariantsTab({
         setVariantsList={setVariantsList}
         onBack={onBack}
         onNext={() => setIsPreviewMode(true)}
+        validDrives={validDrives} // <--- TRUYỀN DANH SÁCH DRIVES XUỐNG WIZARD
       />
     );
   }
@@ -307,12 +325,13 @@ export function ProductVariantsTab({
         initialVariant={editingVariantDraft}
         onSaveEdit={handleWizardEditSave}
         onCancelEdit={() => { setShowEditor(false); setEditingVariant(null); }}
+        validDrives={validDrives} // <--- TRUYỀN DANH SÁCH DRIVES XUỐNG WIZARD
       />
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+   <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Product Variants & Inventory</h2>

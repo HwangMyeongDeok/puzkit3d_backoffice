@@ -137,12 +137,12 @@ export function OrderDetailContent({
               const hasHandOverImage = !!delivery.handOverImageUrl;
 
               return (
-                <Card key={delivery.id} className={delivery.type === 'Support' ? 'border-amber-200 bg-amber-50/10' : ''}>
+                <Card key={delivery.id} className={delivery.type === 'Return' || delivery.type === 'Resend' ? 'border-amber-200 bg-amber-50/10' : ''}>
                   <CardHeader className="pb-3">
                     <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-3">
                       <div className="space-y-1.5">
                         <CardTitle className="flex items-center gap-2 text-base">
-                          {delivery.type === 'Support' ? <ShieldAlert className="h-4 w-4 text-amber-600" /> : <Package2 className="h-4 w-4 text-blue-600" />}
+                          {delivery.type === 'Return' || delivery.type === 'Resend' ? <ShieldAlert className="h-4 w-4 text-amber-600" /> : <Package2 className="h-4 w-4 text-blue-600" />}
                           {delivery.type} Package
                         </CardTitle>
                         <Badge className={delivery.status === 'Delivered' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'}>

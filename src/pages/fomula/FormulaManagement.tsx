@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Calculator, Pencil, Trash2, Plus, FunctionSquare, Delete, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -45,13 +47,39 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 // ==========================================
 // 1. CHILD COMPONENT: FORM EDITOR (VISUAL BLOCK BUILDER)
 // ==========================================
+  // Thêm hàm này ra bên ngoài component
+const parseFormulaExpression = (expression?: string): Token[] => {
+  if (!expression) return [];
+  const initialTokens: Token[] = [];
+  
+  // Dùng chuỗi RegExp: Không cần escape dấu / nữa, và đưa dấu - lên đầu mảng để không cần escape
+  const regexString = "(SUM|AVG|PRODUCT)\\s*\\(\\s*([A-Za-z]+)?\\s*\\)|([A-Za-z]+)|([-+/*()])|(\\d+(?:\\.\\d+)?)";
+  const regex = new RegExp(regexString, "g");
+  
+  let match;
+  while ((match = regex.exec(expression)) !== null) {
+    if (match[1]) initialTokens.push({ id: generateId(), type: 'function', value: match[1], innerValue: match[2] || null });
+    else if (match[3]) initialTokens.push({ id: generateId(), type: 'variable', value: match[3] });
+    else if (match[4]) initialTokens.push({ id: generateId(), type: 'operator', value: match[4] });
+    else if (match[5]) initialTokens.push({ id: generateId(), type: 'number', value: match[5] });
+  }
+  return initialTokens;
+};
+
 function FormulaEditorForm({ formula, formulaId, onClose }: { formula: Formula, formulaId: string, onClose: () => void }) {
   const updateFormula = useUpdateFormula(formulaId);
   const createValidation = useCreateFormulaValidation(formulaId);
   const deleteValidation = useDeleteFormulaValidation(formulaId);
 
-  const [tokens, setTokens] = useState<Token[]>([]);
+  // 1. KHỞI TẠO STATE TRỰC TIẾP TỪ HÀM PARSE (Không dùng useEffect)
+  const [tokens, setTokens] = useState<Token[]>(() => parseFormulaExpression(formula.expression));
   const [description, setDescription] = useState<string>(formula.description || '');
+  
+  // Lấy phần tử cuối cùng làm selectedId mặc định
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    const initTokens = parseFormulaExpression(formula.expression);
+    return initTokens.length > 0 ? initTokens[initTokens.length - 1].id : null;
+  });
 
   // Validation Form States
   const [newValMin, setNewValMin] = useState<string>('');
@@ -61,21 +89,8 @@ function FormulaEditorForm({ formula, formulaId, onClose }: { formula: Formula, 
   // ---------------------------------------------------------
   // PARSER: Convert DB expression string into Visual Blocks
   // ---------------------------------------------------------
-  useEffect(() => {
-    if (!formula.expression) return;
-    const initialTokens: Token[] = [];
-    const regex = /(SUM|AVG|PRODUCT)\s*\(\s*([A-Za-z]+)?\s*\)|([A-Za-z]+)|([\+\-\*\/\(\)])|(\d+(?:\.\d+)?)/g;
-    let match;
-    while ((match = regex.exec(formula.expression)) !== null) {
-      if (match[1]) initialTokens.push({ id: generateId(), type: 'function', value: match[1], innerValue: match[2] || null });
-      else if (match[3]) initialTokens.push({ id: generateId(), type: 'variable', value: match[3] });
-      else if (match[4]) initialTokens.push({ id: generateId(), type: 'operator', value: match[4] });
-      else if (match[5]) initialTokens.push({ id: generateId(), type: 'number', value: match[5] });
-    }
-    setTokens(initialTokens);
-  }, [formula.expression]);
 
-  // Generate the formatted expression string to send to the backend
+
   const getExpressionString = (tokenList: Token[]) => {
     return tokenList.map(t => {
       if (t.type === 'function') return `${t.value}(${t.innerValue || ''})`;
@@ -84,92 +99,140 @@ function FormulaEditorForm({ formula, formulaId, onClose }: { formula: Formula, 
     }).join('').replace(/\s+/g, ' ').trim();
   };
 
+  // Helper tìm vị trí chèn (ngay sau block đang chọn, hoặc ở cuối)
+  const getInsertIndex = () => {
+    if (!selectedId) return tokens.length;
+    const idx = tokens.findIndex(t => t.id === selectedId);
+    return idx >= 0 ? idx + 1 : tokens.length;
+  };
+
   // ---------------------------------------------------------
-  // CLICK HANDLERS (SMART FOCUS & IMMUTABILITY FIX)
+  // CLICK HANDLERS (SMART CURSOR INSERTION)
   // ---------------------------------------------------------
   const handleFunctionClick = (fnName: string) => {
-    setTokens(prev => [...prev, { id: generateId(), type: 'function', value: fnName, innerValue: null }]);
+    const newToken: Token = { id: generateId(), type: 'function', value: fnName, innerValue: null };
+    const newTokens = [...tokens];
+    newTokens.splice(getInsertIndex(), 0, newToken);
+    
+    setTokens(newTokens);
+    setSelectedId(newToken.id); // Dịch con trỏ tới hàm mới tạo
   };
 
   const handlePluralVariableClick = (varName: string) => {
-    setTokens(prev => {
-      const newTokens = [...prev];
-      const lastToken = newTokens[newTokens.length - 1];
-
-      if (lastToken && lastToken.type === 'function' && !lastToken.innerValue) {
-        newTokens[newTokens.length - 1] = { ...lastToken, innerValue: varName };
-        return newTokens;
+    if (selectedId) {
+      const idx = tokens.findIndex(t => t.id === selectedId);
+      if (idx >= 0 && tokens[idx].type === 'function' && !tokens[idx].innerValue) {
+        const newTokens = [...tokens];
+        newTokens[idx] = { ...tokens[idx], innerValue: varName };
+        setTokens(newTokens);
+        return;
       }
-
-      toast.warning('List variables (ending in "s") must be wrapped in a SUM, AVG, or PRODUCT function. Please select a Function first!');
-      return prev;
-    });
+    }
+    toast.warning('List variables (ending in "s") must be wrapped in an empty function block. Please click an empty function to select it first!');
   };
 
   const handleSingularVariableClick = (varName: string) => {
-    setTokens(prev => {
-      const lastToken = prev[prev.length - 1];
-
-      if (lastToken && lastToken.type === 'function' && !lastToken.innerValue) {
-        toast.warning(`Singular variables cannot be used inside array functions. Please select a plural variable for ${lastToken.value}()!`);
-        return prev;
+    if (selectedId) {
+      const idx = tokens.findIndex(t => t.id === selectedId);
+      if (idx >= 0 && tokens[idx].type === 'function' && !tokens[idx].innerValue) {
+        toast.warning(`Singular variables cannot be used inside array functions.`);
+        return;
       }
-
-      return [...prev, { id: generateId(), type: 'variable', value: varName }];
-    });
+    }
+    const newToken: Token = { id: generateId(), type: 'variable', value: varName };
+    const newTokens = [...tokens];
+    newTokens.splice(getInsertIndex(), 0, newToken);
+    
+    setTokens(newTokens);
+    setSelectedId(newToken.id);
   };
 
   const handleOperatorClick = (op: string) => {
-    setTokens(prev => [...prev, { id: generateId(), type: 'operator', value: op }]);
+    const newToken: Token = { id: generateId(), type: 'operator', value: op };
+    const newTokens = [...tokens];
+    newTokens.splice(getInsertIndex(), 0, newToken);
+    
+    setTokens(newTokens);
+    setSelectedId(newToken.id);
   };
 
   const handleNumberClick = (num: string) => {
-    setTokens(prev => {
-      const newTokens = [...prev];
-      const lastToken = newTokens[newTokens.length - 1];
-
-      // If the last token is already a number, append the digit (e.g. '1' + '5' = '15')
-      if (lastToken && lastToken.type === 'number') {
-        // Prevent multiple decimals
-        if (num === '.' && lastToken.value.includes('.')) return prev;
-
-        newTokens[newTokens.length - 1] = { ...lastToken, value: lastToken.value + num };
-        return newTokens;
+    // Nếu đang chọn 1 block số => Nối số vào
+    if (selectedId) {
+      const idx = tokens.findIndex(t => t.id === selectedId);
+      if (idx >= 0 && tokens[idx].type === 'number') {
+        const target = tokens[idx];
+        if (num === '.' && target.value.includes('.')) return; // Chống bấm 2 dấu thập phân
+        
+        const newTokens = [...tokens];
+        newTokens[idx] = { ...target, value: target.value + num };
+        setTokens(newTokens);
+        return;
       }
+    }
 
-      return [...prev, { id: generateId(), type: 'number', value: num }];
-    });
+    // Nếu không, tạo block số mới
+    const newToken: Token = { id: generateId(), type: 'number', value: num };
+    const newTokens = [...tokens];
+    newTokens.splice(getInsertIndex(), 0, newToken);
+    
+    setTokens(newTokens);
+    setSelectedId(newToken.id);
   };
 
   // ---------------------------------------------------------
-  // DELETE LOGIC (BACKSPACE AND HOVER X)
+  // DELETE LOGIC
   // ---------------------------------------------------------
   const handleBackspace = () => {
-    setTokens(prev => {
-      if (prev.length === 0) return prev;
-      const newTokens = [...prev];
-      const lastToken = newTokens[newTokens.length - 1];
+    if (tokens.length === 0) return;
 
-      // 1. If it's a function with a variable inside -> strip the variable first
-      if (lastToken.type === 'function' && lastToken.innerValue) {
-        newTokens[newTokens.length - 1] = { ...lastToken, innerValue: null };
-        return newTokens;
-      }
+    // Nếu không chọn gì, mặc định xóa ở cuối cùng
+    const idx = selectedId ? tokens.findIndex(t => t.id === selectedId) : tokens.length - 1;
+    if (idx === -1) return;
 
-      // 2. If it's a number with multiple digits -> remove the last digit
-      if (lastToken.type === 'number' && lastToken.value.length > 1) {
-        newTokens[newTokens.length - 1] = { ...lastToken, value: lastToken.value.slice(0, -1) };
-        return newTokens;
-      }
+    const target = tokens[idx];
+    const newTokens = [...tokens];
 
-      // 3. Otherwise: Remove the entire block
-      newTokens.pop();
-      return newTokens;
-    });
+    // 1. Tháo biến khỏi function
+    if (target.type === 'function' && target.innerValue) {
+      newTokens[idx] = { ...target, innerValue: null };
+      setTokens(newTokens);
+      return;
+    }
+
+    // 2. Xóa từng số của một block số dài
+    if (target.type === 'number' && target.value.length > 1) {
+      newTokens[idx] = { ...target, value: target.value.slice(0, -1) };
+      setTokens(newTokens);
+      return;
+    }
+
+    // 3. Xóa nguyên block
+    newTokens.splice(idx, 1);
+    setTokens(newTokens);
+
+    // Di chuyển con trỏ tự động lùi về 1 block
+    if (idx > 0) {
+      setSelectedId(newTokens[idx - 1].id);
+    } else if (newTokens.length > 0) {
+      setSelectedId(newTokens[0].id);
+    } else {
+      setSelectedId(null);
+    }
   };
 
-  const handleRemoveTokenById = (id: string) => {
-    setTokens(prev => prev.filter(t => t.id !== id));
+  const handleRemoveTokenById = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Không cho trigger hàm select ở dưới
+    const idx = tokens.findIndex(t => t.id === id);
+    const newTokens = tokens.filter(t => t.id !== id);
+    setTokens(newTokens);
+
+    // Nếu xóa trúng block đang được chọn thì dời con trỏ
+    if (selectedId === id) {
+      if (idx > 0) setSelectedId(newTokens[idx - 1].id);
+      else if (newTokens.length > 0) setSelectedId(newTokens[0].id);
+      else setSelectedId(null);
+    }
   };
 
   // ---------------------------------------------------------
@@ -178,7 +241,6 @@ function FormulaEditorForm({ formula, formulaId, onClose }: { formula: Formula, 
   const handleSaveFormula = async () => {
     if (tokens.length === 0) return toast.error("Formula cannot be empty!");
 
-    // Scan for empty functions before saving
     const emptyFunction = tokens.find(t => t.type === 'function' && !t.innerValue);
     if (emptyFunction) {
       return toast.error(`The function ${emptyFunction.value}() is empty. Please insert a variable or remove the function!`);
@@ -205,64 +267,85 @@ function FormulaEditorForm({ formula, formulaId, onClose }: { formula: Formula, 
       <div className="bg-white p-5 rounded-xl border shadow-sm space-y-5">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-sm text-slate-500 uppercase">1. Formula Builder (Visual Editor)</h3>
+          <span className="text-xs text-slate-400 italic">Click a block to edit or insert after it.</span>
         </div>
 
         {/* ======================================= */}
         {/* CANVAS: FORMULA DISPLAY AREA            */}
         {/* ======================================= */}
-        <div className="relative p-5 min-h-[120px] bg-slate-50 border-2 border-slate-300 rounded-xl flex flex-wrap content-start gap-2 items-center">
+        <div 
+          className="relative p-5 min-h-[120px] bg-slate-50 border-2 border-slate-300 rounded-xl flex flex-wrap content-start gap-2 items-center cursor-text"
+          onClick={() => setSelectedId(null)} // Click vào nền trống thì dời con trỏ về cuối cùng
+        >
           {tokens.length === 0 && (
             <span className="text-slate-400 absolute top-5 left-5 select-none pointer-events-none">
               Click the buttons below to build the formula...
             </span>
           )}
 
-          {tokens.map(token => (
-            <div key={token.id} className="group relative flex items-center transition-all">
-              <button
-                onClick={() => handleRemoveTokenById(token.id)}
-                className="hidden group-hover:flex absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full items-center justify-center z-10 shadow hover:bg-red-600 transition-transform hover:scale-110"
+          {tokens.map(token => {
+            const isSelected = selectedId === token.id;
+            
+            return (
+              <div 
+                key={token.id} 
+                onClick={(e) => {
+                  e.stopPropagation(); // Click vào block thì chặn sự kiện click nền
+                  setSelectedId(token.id);
+                }}
+                className={`group relative flex items-center transition-all cursor-pointer p-0.5 rounded-lg ${
+                  isSelected ? 'ring-2 ring-blue-500 ring-offset-1 bg-blue-50/50' : 'hover:bg-slate-200/50'
+                }`}
               >
-                <X size={12} strokeWidth={3} />
-              </button>
+                <button
+                  onClick={(e) => handleRemoveTokenById(token.id, e)}
+                  className="hidden group-hover:flex absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full items-center justify-center z-10 shadow hover:bg-red-600 transition-transform hover:scale-110"
+                >
+                  <X size={12} strokeWidth={3} />
+                </button>
 
-              {token.type === 'function' && (
-                <div className="bg-green-50 px-2 py-1.5 rounded-lg font-mono text-sm shadow-sm border border-green-300 flex items-center">
-                  <span className="text-green-700 font-bold">{token.value}</span>
-                  <span className="mx-1 text-green-600 font-bold">(</span>
-                  {token.innerValue ? (
-                    <span className="text-purple-700 bg-white border border-purple-200 font-semibold px-2 py-0.5 rounded shadow-sm">
-                      {token.innerValue}
-                    </span>
-                  ) : (
-                    <span className="text-green-600/70 bg-white/60 px-3 py-0.5 rounded border border-green-300 border-dashed animate-pulse text-xs italic">
-                      Awaiting variable...
-                    </span>
-                  )}
-                  <span className="mx-1 text-green-600 font-bold">)</span>
-                </div>
-              )}
+                {token.type === 'function' && (
+                  <div className="bg-green-50 px-2 py-1.5 rounded-lg font-mono text-sm shadow-sm border border-green-300 flex items-center">
+                    <span className="text-green-700 font-bold">{token.value}</span>
+                    <span className="mx-1 text-green-600 font-bold">(</span>
+                    {token.innerValue ? (
+                      <span className="text-purple-700 bg-white border border-purple-200 font-semibold px-2 py-0.5 rounded shadow-sm">
+                        {token.innerValue}
+                      </span>
+                    ) : (
+                      <span className="text-green-600/70 bg-white/60 px-3 py-0.5 rounded border border-green-300 border-dashed animate-pulse text-xs italic">
+                        Awaiting variable...
+                      </span>
+                    )}
+                    <span className="mx-1 text-green-600 font-bold">)</span>
+                  </div>
+                )}
 
-              {token.type === 'variable' && (
-                <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm border border-blue-200">
-                  {token.value}
-                </div>
-              )}
+                {token.type === 'variable' && (
+                  <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm border border-blue-200">
+                    {token.value}
+                  </div>
+                )}
 
-              {token.type === 'operator' && (
-                <div className="bg-white text-slate-700 px-3 py-1.5 rounded-lg text-sm font-black shadow-sm border border-slate-300">
-                  {token.value}
-                </div>
-              )}
+                {token.type === 'operator' && (
+                  <div className="bg-white text-slate-700 px-3 py-1.5 rounded-lg text-sm font-black shadow-sm border border-slate-300">
+                    {token.value}
+                  </div>
+                )}
 
-              {token.type === 'number' && (
-                <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-mono text-sm font-bold shadow-sm border border-emerald-200">
-                  {token.value}
-                </div>
-              )}
-            </div>
-          ))}
-          <div className="w-[3px] h-6 bg-slate-400 animate-pulse ml-2 rounded-full" />
+                {token.type === 'number' && (
+                  <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-mono text-sm font-bold shadow-sm border border-emerald-200">
+                    {token.value}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          
+          {/* Con trỏ ở cuối cùng (khi ko có block nào đc focus) */}
+          {!selectedId && tokens.length > 0 && (
+            <div className="w-[3px] h-6 bg-blue-500 animate-pulse ml-1 rounded-full" />
+          )}
         </div>
 
         {/* ======================================= */}
@@ -433,7 +516,7 @@ function FormulaEditDialog({ formulaId, isOpen, onClose }: { formulaId: string |
           {isLoading ? (
             <div className="space-y-6"><Skeleton className="h-[400px] w-full rounded-xl" /><Skeleton className="h-[200px] w-full rounded-xl" /></div>
           ) : (
-            formula && <FormulaEditorForm formula={formula} formulaId={formulaId!} onClose={onClose} />
+            formula && <FormulaEditorForm key={formula.id} formula={formula} formulaId={formulaId!} onClose={onClose} />
           )}
         </div>
       </DialogContent>
@@ -480,7 +563,7 @@ export default function FormulaManagement() {
                   {formula.expression ? (
                     <code
                       className="bg-slate-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-mono font-semibold border border-slate-200 shadow-sm block truncate max-w-[250px] md:max-w-[350px] lg:max-w-[500px]"
-                      title={formula.expression} // Hiển thị full text khi hover chuột
+                      title={formula.expression}
                     >
                       {formula.expression}
                     </code>
