@@ -29,6 +29,7 @@ import QuotationPage from './pages/quotation/QuotationPage';
 import SystemConfigurationsPage from './pages/system-config/SystemConfigurationsPage';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import CatalogPage from './pages/catalog/CatalogPage';
+import FormulaManagement from './pages/fomula/FormulaManagement';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -255,6 +256,15 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['Business Manager']}>
                   <SystemConfigurationsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/formula-management"
+              element={
+                <ProtectedRoute allowedRoles={['Business Manager']}>
+                  <FormulaManagement />
                 </ProtectedRoute>
               }
             />

@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Users,
-  Package,
   LogOut,
   Menu,
   Headset,
@@ -78,6 +77,12 @@ export function MainLayout() {
       icon: Settings,
       roles: ['Business Manager'],
     },
+     {
+      title: 'Instock Products',
+      href: '/instock-products',
+      icon: Settings,
+      roles: ['Business Manager', 'Staff'],
+    },
     {
       title: 'Feedback Management',
       href: '/feedback-management',
@@ -111,6 +116,12 @@ export function MainLayout() {
     {
       title: 'System Configurations',
       href: '/system-configurations',
+      icon: Settings,
+      roles: ['Business Manager'],
+    },
+    {
+      title: 'Formula Management',
+      href: '/formula-management',
       icon: Settings,
       roles: ['Business Manager'],
     }
