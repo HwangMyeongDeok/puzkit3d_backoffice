@@ -58,23 +58,22 @@ interface RequirementFormSheetProps {
   selectedReq: CustomDesignRequirement | null;
 }
 
-// ─── Difficulty config ───
 const DIFFICULTY_OPTIONS = [
   {
     value: "Basic",
-    label: "Cơ bản",
+    label: "Basic",
     color: "bg-sky-50 text-sky-700 border-sky-200",
     dot: "bg-sky-500",
   },
   {
     value: "Intermediate",
-    label: "Trung cấp",
+    label: "Intermediate",
     color: "bg-amber-50 text-amber-700 border-amber-200",
     dot: "bg-amber-500",
   },
   {
     value: "Advanced",
-    label: "Nâng cao",
+    label: "Advanced",
     color: "bg-orange-50 text-orange-700 border-orange-200",
     dot: "bg-orange-500",
   },
@@ -90,7 +89,6 @@ export const RequirementFormSheet = ({
   const updateMutation = useUpdateRequirement();
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
-  // ─── Fetch master data ───
   const { data: topicsData = [], isLoading: loadingTopics } = useTopics();
   const { data: materialsData = [], isLoading: loadingMaterials } =
     useMaterials();
@@ -102,10 +100,8 @@ export const RequirementFormSheet = ({
   const isMasterDataLoading =
     loadingTopics || loadingMaterials || loadingAssembly || loadingCapabilities;
 
-  // ─── Capability dropdown open state ───
   const [capabilityOpen, setCapabilityOpen] = useState(false);
 
-  // ─── Form ───
   const { register, handleSubmit, reset, setValue, watch, control } =
     useForm<UpsertRequirementPayload>({
       defaultValues: {
@@ -121,7 +117,6 @@ export const RequirementFormSheet = ({
   const capabilityIdsValue = watch("capabilityIds") || [];
   const difficultyValue = watch("difficulty");
 
-  // ─── Reset on open / selectedReq change ───
   useEffect(() => {
     if (isOpen) {
       if (selectedReq) {
@@ -151,7 +146,6 @@ export const RequirementFormSheet = ({
     }
   }, [selectedReq, reset, isOpen]);
 
-  // ─── Toggle capability ───
   const toggleCapability = (id: string) => {
     const current = capabilityIdsValue || [];
     const next = current.includes(id)
@@ -169,7 +163,6 @@ export const RequirementFormSheet = ({
     );
   };
 
-  // ─── Submit ───
   const onSubmit = async (data: UpsertRequirementPayload) => {
     const promise = selectedReq
       ? (updateMutation.mutateAsync({
@@ -179,26 +172,24 @@ export const RequirementFormSheet = ({
       : (createMutation.mutateAsync(data) as Promise<unknown>);
 
     toast.promise(promise, {
-      loading: "Đang xử lý dữ liệu...",
+      loading: "Processing data...",
       success: () => {
         onOpenChange(false);
-        return selectedReq ? "Cập nhật thành công!" : "Tạo mới thành công!";
+        return selectedReq ? "Updated successfully!" : "Created successfully!";
       },
-      error: (err: unknown) => extractErrorMessage(err, "Có lỗi xảy ra từ máy chủ, vui lòng thử lại!"),
+      error: (err: unknown) => extractErrorMessage(err, "A server error occurred, please try again!"),
     });
   };
 
-  // ─── Helpers ───
   const getDifficultyConfig = (val: string) =>
     DIFFICULTY_OPTIONS.find((d) => d.value === val) || DIFFICULTY_OPTIONS[1];
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      if (isSubmitting) return; // Prevent closing while submitting
+      if (isSubmitting) return;
       onOpenChange(open);
     }}>
       <DialogContent className="sm:max-w-3xl max-h-[92vh] p-0 gap-0 overflow-hidden rounded-2xl border-slate-200/80 shadow-2xl">
-        {/* ─── Header ─── */}
         <div className="relative bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-8 py-6">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-600/20 via-transparent to-transparent" />
           <DialogHeader className="relative z-10 mb-0">
@@ -209,19 +200,18 @@ export const RequirementFormSheet = ({
               <div>
                 <DialogTitle className="text-xl font-bold text-white tracking-tight">
                   {selectedReq
-                    ? "Cập nhật Requirement"
-                    : "Thêm mới Requirement"}
+                    ? "Update Requirement"
+                    : "Add New Requirement"}
                 </DialogTitle>
                 <DialogDescription className="text-slate-400 text-sm mt-0.5">
                   {selectedReq
-                    ? `Chỉnh sửa thông tin cho mã ${selectedReq.code}`
-                    : "Cấu hình thông tin kỹ thuật cho mẫu thiết kế mới"}
+                    ? `Edit information for code ${selectedReq.code}`
+                    : "Configure technical details for new design"}
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
-          {/* Status badge */}
           {selectedReq && (
             <div className="relative z-10 mt-4 flex items-center gap-2">
               <Badge
@@ -232,7 +222,7 @@ export const RequirementFormSheet = ({
                     : "bg-red-500/10 text-red-400 border-red-500/30"
                 }`}
               >
-                {selectedReq.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
+                {selectedReq.isActive ? "Active" : "Inactive"}
               </Badge>
               <span className="text-xs text-slate-500 font-mono">
                 {selectedReq.code}
@@ -241,13 +231,12 @@ export const RequirementFormSheet = ({
           )}
         </div>
 
-        {/* ─── Content body ─── */}
         <ScrollArea className="flex-1 max-h-[calc(92vh-200px)]">
           {isMasterDataLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
               <p className="text-sm text-slate-500">
-                Đang tải dữ liệu danh mục...
+                Loading master data...
               </p>
             </div>
           ) : (
@@ -255,28 +244,26 @@ export const RequirementFormSheet = ({
               id="requirement-form"
               onSubmit={handleSubmit(onSubmit, (errors) => {
                 const missing = Object.keys(errors).join(", ");
-                toast.error(`Form chưa hợp lệ. Vui lòng kiểm tra các trường: ${missing}`);
+                toast.error(`Invalid form. Please check the following fields: ${missing}`);
               })}
               className="px-8 py-6 space-y-8"
             >
-              {/* ─── Section: Phân loại kỹ thuật ─── */}
               <div className="space-y-5">
                 <div className="flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                     <Layers className="h-4 w-4" />
                   </div>
                   <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">
-                    Phân loại kỹ thuật
+                    Technical Classification
                   </h3>
                 </div>
                 <Separator className="bg-slate-100" />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* Topic */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
                       <Puzzle className="h-3.5 w-3.5 text-slate-400" />
-                      Chủ đề
+                      Topic
                       <span className="text-red-400">*</span>
                     </Label>
                     <Controller
@@ -290,7 +277,7 @@ export const RequirementFormSheet = ({
                           disabled={topicsData.length === 0}
                         >
                           <SelectTrigger className="h-11 bg-slate-50/50 border-slate-200 hover:border-slate-300 transition-colors focus:ring-blue-500/30">
-                            <SelectValue placeholder={topicsData.length === 0 ? "Chưa có chủ đề" : "Chọn chủ đề..."} />
+                            <SelectValue placeholder={topicsData.length === 0 ? "No topics available" : "Select topic..."} />
                           </SelectTrigger>
                           <SelectContent>
                             {topicsData.map((topic) => (
@@ -313,11 +300,10 @@ export const RequirementFormSheet = ({
                     />
                   </div>
 
-                  {/* Material */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
                       <Layers className="h-3.5 w-3.5 text-slate-400" />
-                      Vật liệu
+                      Material
                       <span className="text-red-400">*</span>
                     </Label>
                     <Controller
@@ -331,7 +317,7 @@ export const RequirementFormSheet = ({
                           disabled={materialsData.length === 0}
                         >
                           <SelectTrigger className="h-11 bg-slate-50/50 border-slate-200 hover:border-slate-300 transition-colors focus:ring-blue-500/30">
-                            <SelectValue placeholder={materialsData.length === 0 ? "Chưa có vật liệu" : "Chọn vật liệu..."} />
+                            <SelectValue placeholder={materialsData.length === 0 ? "No materials available" : "Select material..."} />
                           </SelectTrigger>
                           <SelectContent>
                             {materialsData.map((mat) => (
@@ -349,11 +335,10 @@ export const RequirementFormSheet = ({
                     />
                   </div>
 
-                  {/* Assembly Method — full width */}
                   <div className="space-y-2 md:col-span-2">
                     <Label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
                       <Wrench className="h-3.5 w-3.5 text-slate-400" />
-                      Phương pháp lắp ráp
+                      Assembly Method
                       <span className="text-red-400">*</span>
                     </Label>
                     <Controller
@@ -367,7 +352,7 @@ export const RequirementFormSheet = ({
                           disabled={assemblyMethodsData.length === 0}
                         >
                           <SelectTrigger className="h-11 bg-slate-50/50 border-slate-200 hover:border-slate-300 transition-colors focus:ring-blue-500/30">
-                            <SelectValue placeholder={assemblyMethodsData.length === 0 ? "Chưa có phương pháp" : "Chọn phương pháp lắp ráp..."} />
+                            <SelectValue placeholder={assemblyMethodsData.length === 0 ? "No methods available" : "Select assembly method..."} />
                           </SelectTrigger>
                           <SelectContent>
                             {assemblyMethodsData.map((am) => (
@@ -390,27 +375,25 @@ export const RequirementFormSheet = ({
                 </div>
               </div>
 
-              {/* ─── Section: Khả năng (Multi-select) ─── */}
               <div className="space-y-5">
                 <div className="flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
                     <Sparkles className="h-4 w-4" />
                   </div>
                   <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">
-                    Khả năng yêu cầu
+                    Required Capabilities
                   </h3>
                   {capabilityIdsValue.length > 0 && (
                     <Badge
                       variant="secondary"
                       className="ml-auto text-xs bg-violet-50 text-violet-700"
                     >
-                      {capabilityIdsValue.length} đã chọn
+                      {capabilityIdsValue.length} selected
                     </Badge>
                   )}
                 </div>
                 <Separator className="bg-slate-100" />
 
-                {/* Selected capabilities tags */}
                 {capabilityIdsValue.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {capabilityIdsValue.map((id) => {
@@ -435,7 +418,6 @@ export const RequirementFormSheet = ({
                   </div>
                 )}
 
-                {/* Dropdown toggle */}
                 <button
                   type="button"
                   onClick={() => setCapabilityOpen(!capabilityOpen)}
@@ -443,8 +425,8 @@ export const RequirementFormSheet = ({
                 >
                   <span className="text-slate-500">
                     {capabilityIdsValue.length === 0
-                      ? "Chọn các khả năng..."
-                      : `${capabilityIdsValue.length} khả năng đã chọn`}
+                      ? "Select capabilities..."
+                      : `${capabilityIdsValue.length} capabilities selected`}
                   </span>
                   <ChevronDown
                     className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${
@@ -453,7 +435,6 @@ export const RequirementFormSheet = ({
                   />
                 </button>
 
-                {/* Dropdown list */}
                 {capabilityOpen && (
                   <div className="border border-slate-200 rounded-xl bg-white shadow-lg overflow-hidden animate-in slide-in-from-top-2 duration-200">
                     <ScrollArea className="max-h-48">
@@ -494,7 +475,7 @@ export const RequirementFormSheet = ({
                         })}
                         {capabilitiesData.length === 0 && (
                           <p className="text-center text-sm text-slate-400 py-4">
-                            Không có dữ liệu
+                            No data available
                           </p>
                         )}
                       </div>
@@ -503,24 +484,22 @@ export const RequirementFormSheet = ({
                 )}
               </div>
 
-              {/* ─── Section: Thông số ─── */}
               <div className="space-y-5">
                 <div className="flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
                     <Gauge className="h-4 w-4" />
                   </div>
                   <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">
-                    Thông số & Cấu hình
+                    Parameters & Configuration
                   </h3>
                 </div>
                 <Separator className="bg-slate-100" />
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  {/* Difficulty */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
                       <Gauge className="h-3.5 w-3.5 text-slate-400" />
-                      Độ khó
+                      Difficulty
                     </Label>
                     <Controller
                       control={control}
@@ -531,7 +510,7 @@ export const RequirementFormSheet = ({
                           onValueChange={field.onChange}
                         >
                           <SelectTrigger className="h-11 bg-slate-50/50 border-slate-200 hover:border-slate-300 transition-colors focus:ring-blue-500/30">
-                            <SelectValue placeholder="Chọn độ khó" />
+                            <SelectValue placeholder="Select difficulty" />
                           </SelectTrigger>
                           <SelectContent>
                             {DIFFICULTY_OPTIONS.map((opt) => (
@@ -550,7 +529,6 @@ export const RequirementFormSheet = ({
                         </Select>
                       )}
                     />
-                    {/* Visual difficulty indicator */}
                     {difficultyValue && (
                       <div className="flex gap-1 pt-0.5">
                         {DIFFICULTY_OPTIONS.map((opt, idx) => (
@@ -569,7 +547,6 @@ export const RequirementFormSheet = ({
                     )}
                   </div>
 
-                  {/* Min Part */}
                   <div className="space-y-2">
                     <Label
                       htmlFor="minPart"
@@ -587,7 +564,6 @@ export const RequirementFormSheet = ({
                     />
                   </div>
 
-                  {/* Max Part */}
                   <div className="space-y-2">
                     <Label
                       htmlFor="maxPart"
@@ -604,13 +580,12 @@ export const RequirementFormSheet = ({
                       {...register("maxPartQuantity", { 
                         valueAsNumber: true, 
                         required: true,
-                        validate: (val) => val >= watch("minPartQuantity") || "Max Parts phải lớn hơn hoặc bằng Min Parts"
+                        validate: (val) => val >= watch("minPartQuantity") || "Max Parts must be greater than or equal to Min Parts"
                       })}
                     />
                   </div>
                 </div>
 
-                {/* Active toggle */}
                 <div className="flex items-center justify-between rounded-xl bg-slate-50/80 border border-slate-200 p-4">
                   <div className="flex items-center gap-3">
                     <div
@@ -624,12 +599,12 @@ export const RequirementFormSheet = ({
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-slate-800">
-                        Trạng thái hoạt động
+                        Active Status
                       </p>
                       <p className="text-xs text-slate-500">
                         {isActiveValue
-                          ? "Requirement này đang được kích hoạt"
-                          : "Requirement này đang bị tắt"}
+                          ? "This requirement is active"
+                          : "This requirement is inactive"}
                       </p>
                     </div>
                   </div>
@@ -644,7 +619,6 @@ export const RequirementFormSheet = ({
           )}
         </ScrollArea>
 
-        {/* ─── Footer ─── */}
         <div className="border-t border-slate-200 bg-slate-50/50">
           <DialogFooter className="px-8 py-4 gap-3 sm:gap-3">
             <Button
@@ -654,7 +628,7 @@ export const RequirementFormSheet = ({
               disabled={isSubmitting}
               className="h-11 px-6 border-slate-300 hover:bg-slate-100 text-slate-700 font-medium"
             >
-              Hủy bỏ
+              Cancel
             </Button>
             <Button
               type="submit"
@@ -665,7 +639,7 @@ export const RequirementFormSheet = ({
               {isSubmitting && (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
-              {selectedReq ? "Cập nhật" : "Tạo mới"}
+              {selectedReq ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </div>

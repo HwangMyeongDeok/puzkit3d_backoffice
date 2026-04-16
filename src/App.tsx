@@ -6,7 +6,8 @@ import { useAuthStore } from './store/useAuthStore';
 import { MainLayout } from './components/layout/MainLayout';
 import PartnerProductRequestsListPage from './pages/partner-product-requests/PartnerProductRequestsListPage';
 import PartnerProductRequestDetailPage from './pages/partner-product-requests/PartnerProductRequestDetailPage';
-import { CatalogPage } from './pages/catalog/CatalogPage';
+import CatalogPage from './pages/catalog/CatalogPage';
+import { StaffPartnerProductRequestsPage } from './pages/staff/StaffPartnerProductRequestsPage';
 
 import { Login } from './pages/auth/Login';
 import { Unauthorized } from './pages/Unauthorized';
@@ -30,6 +31,8 @@ import { ProductionTemplatePage } from './pages/production-template/ProductionTe
 import QuotationPage from './pages/quotation/QuotationPage';
 import SystemConfigurationsPage from './pages/system-config/SystemConfigurationsPage';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import FormulaManagement from './pages/fomula/FormulaManagement';
+import DriveManagement from './pages/drive/DriveManagement';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,8 +76,12 @@ function App() {
               }
             />
 
+            {/* ======================= ORDERS TABS ======================= */}
+            {/* Tự động redirect /orders về /orders/instock */}
+            <Route path="/orders" element={<Navigate to="/orders/instock" replace />} />
+
             <Route
-              path="/orders"
+              path="/orders/instock"
               element={
                 <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <OrderManagement />
@@ -92,7 +99,7 @@ function App() {
             />
 
             <Route
-              path="/partner-products"
+              path="/orders/partner"
               element={
                 <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <PartnerProductsPage />
@@ -119,7 +126,7 @@ function App() {
             />
 
             <Route
-              path="/catalog"
+              path="/catalog-management"
               element={
                 <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <CatalogPage />
@@ -258,6 +265,24 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['Business Manager']}>
                   <SystemConfigurationsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/formula-management"
+              element={
+                <ProtectedRoute allowedRoles={['Business Manager']}>
+                  <FormulaManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/drive-management"
+              element={
+                <ProtectedRoute allowedRoles={['Business Manager']}>
+                  <DriveManagement />
                 </ProtectedRoute>
               }
             />

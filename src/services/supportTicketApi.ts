@@ -8,15 +8,16 @@ import { toast } from 'sonner';
    Types
 ───────────────────────────────────────────────────────────────────────────── */
 
-export type TicketType   = 'ReplacePart' | 'Exchange' | 'Return';
+export type TicketType   = 'ReplaceDrive' | 'Exchange' | 'Return';
 export type TicketStatus = 'Open' | 'Processing' | 'Resolved' | 'Rejected';
 
 export interface TicketDetailItem {
   id: string;
   orderDetailId: string;
-  partId?: string | null;
+  driveId?: string | null;
   quantity: number;
   note?: string | null;
+
   productName?: string;
   variantName?: string;
   thumbnailUrl?: string;
@@ -24,26 +25,19 @@ export interface TicketDetailItem {
 
 export interface SupportTicketDto {
   id: string;
+  code: string;
+  userId: string;
   orderId: string;
-  orderCode?: string;
   type: TicketType;
   status: TicketStatus;
   reason: string;
   proof: string;
   createdAt: string;
-  updatedAt?: string;
+  updatedAt: string;
   details: TicketDetailItem[];
 }
 
-export interface SupportTicketListItemDto {
-  id: string;
-  orderId: string;
-  code?: string;
-  type: TicketType;
-  status: TicketStatus;
-  reason: string;
-  createdAt: string;
-}
+export type SupportTicketListItemDto = SupportTicketDto;
 
 export interface TicketPagedResult {
   items: SupportTicketListItemDto[];

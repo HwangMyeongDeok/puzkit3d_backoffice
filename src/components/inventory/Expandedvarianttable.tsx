@@ -18,9 +18,6 @@ import {
   type InventoryDialogVariant,
 } from "@/components/inventory/Editinventorydialog";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-/** Mapped từ GET /api/instock-products/{productId}/variants */
 interface InstockProductVariant {
   id: string;
   sku: string;
@@ -34,10 +31,6 @@ interface InstockProductVariant {
 }
 
 export interface VariantWithInventory extends InstockProductVariant {
-  /**
-   * undefined  → GET inventory trả 404 (chưa tạo bao giờ)
-   * number     → tồn kho thực tế (kể cả 0)
-   */
   stockQuantity: number | undefined;
   hasNoInventory: boolean;
 }
@@ -45,8 +38,6 @@ export interface VariantWithInventory extends InstockProductVariant {
 interface ExpandedVariantTableProps {
   productId: string;
 }
-
-// ─── Skeleton Loader ──────────────────────────────────────────────────────────
 
 function VariantTableSkeleton() {
   return (
@@ -64,18 +55,14 @@ function VariantTableSkeleton() {
   );
 }
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
-
 function EmptyVariants() {
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
       <PackageX className="h-8 w-8 opacity-40" />
-      <p className="text-sm">Sản phẩm này chưa có biến thể nào.</p>
+      <p className="text-sm">This product has no variants yet.</p>
     </div>
   );
 }
-
-// ─── Stock Badge ──────────────────────────────────────────────────────────────
 
 function StockBadge({
   quantity,
@@ -90,14 +77,14 @@ function StockBadge({
         variant="outline"
         className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs gap-1"
       >
-        Chưa có
+        Not set
       </Badge>
     );
   }
   if (quantity === 0) {
     return (
       <Badge variant="destructive" className="font-semibold text-xs">
-        Hết hàng
+        Out of stock
       </Badge>
     );
   }
@@ -107,8 +94,6 @@ function StockBadge({
     </Badge>
   );
 }
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ExpandedVariantTable({ productId }: ExpandedVariantTableProps) {
   const { data: variants, isLoading } = useVariantsWithInventory(
@@ -138,10 +123,9 @@ export function ExpandedVariantTable({ productId }: ExpandedVariantTableProps) {
   return (
     <>
       <div className="border-t border-dashed border-border/60 bg-muted/30">
-        {/* Sub-header */}
         <div className="px-3 py-2 flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Biến thể &amp; Tồn kho
+            Variants &amp; Inventory
           </span>
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground font-medium">
             {variants.length}
@@ -152,22 +136,22 @@ export function ExpandedVariantTable({ productId }: ExpandedVariantTableProps) {
           <TableHeader>
             <TableRow className="hover:bg-transparent border-border/50">
               <TableHead className="pl-6 text-xs font-semibold text-muted-foreground">
-                Màu sắc
+                Color
               </TableHead>
               <TableHead className="text-xs font-semibold text-muted-foreground">
                 SKU
               </TableHead>
               <TableHead className="text-xs font-semibold text-muted-foreground">
-                Kích thước (D × R × C)
+                Dimensions (L × W × H)
               </TableHead>
               <TableHead className="text-xs font-semibold text-muted-foreground">
-                Trạng thái
+                Status
               </TableHead>
               <TableHead className="text-xs font-semibold text-muted-foreground">
-                Tồn kho
+                Stock
               </TableHead>
               <TableHead className="text-xs font-semibold text-muted-foreground text-right pr-4">
-                Thao tác
+                Actions
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -178,7 +162,6 @@ export function ExpandedVariantTable({ productId }: ExpandedVariantTableProps) {
                 key={variant.id}
                 className="hover:bg-muted/50 border-border/30 transition-colors"
               >
-                {/* Màu sắc */}
                 <TableCell className="pl-6 py-2.5">
                   <span className="text-sm font-medium text-foreground">
                     {variant.color || (
@@ -187,14 +170,12 @@ export function ExpandedVariantTable({ productId }: ExpandedVariantTableProps) {
                   </span>
                 </TableCell>
 
-                {/* SKU */}
                 <TableCell className="py-2.5">
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                     {variant.sku}
                   </code>
                 </TableCell>
 
-                {/* Kích thước */}
                 <TableCell className="py-2.5">
                   <span className="text-sm text-foreground tabular-nums">
                     {variant.assembledLengthMm} × {variant.assembledWidthMm} ×{" "}
@@ -205,26 +186,24 @@ export function ExpandedVariantTable({ productId }: ExpandedVariantTableProps) {
                   </span>
                 </TableCell>
 
-                {/* isActive */}
                 <TableCell className="py-2.5">
                   {variant.isActive ? (
                     <Badge
                       variant="outline"
                       className="border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs"
                     >
-                      Đang bán
+                      Active
                     </Badge>
                   ) : (
                     <Badge
                       variant="outline"
                       className="border-muted-foreground/30 bg-muted/30 text-muted-foreground text-xs"
                     >
-                      Ngừng bán
+                      Inactive
                     </Badge>
                   )}
                 </TableCell>
 
-                {/* Tồn kho */}
                 <TableCell className="py-2.5">
                   <StockBadge
                     quantity={variant.stockQuantity}
@@ -232,7 +211,6 @@ export function ExpandedVariantTable({ productId }: ExpandedVariantTableProps) {
                   />
                 </TableCell>
 
-                {/* Action */}
                 <TableCell className="py-2.5 text-right pr-4">
                   <Button
                     variant="ghost"
@@ -241,8 +219,8 @@ export function ExpandedVariantTable({ productId }: ExpandedVariantTableProps) {
                     onClick={() => handleOpenEdit(variant)}
                     aria-label={
                       variant.hasNoInventory
-                        ? "Tạo tồn kho cho biến thể này"
-                        : "Chỉnh sửa tồn kho"
+                        ? "Create inventory for this variant"
+                        : "Edit inventory"
                     }
                   >
                     {variant.hasNoInventory ? (
@@ -258,9 +236,8 @@ export function ExpandedVariantTable({ productId }: ExpandedVariantTableProps) {
         </Table>
       </div>
 
-      {/* Dialog — mount 1 lần ngoài table để tránh re-render toàn bảng */}
       <EditInventoryDialog
-      key={selectedVariant?.id || "empty"}
+        key={selectedVariant?.id || "empty"}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         productId={productId}

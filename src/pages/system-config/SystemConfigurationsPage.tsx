@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import { ShoppingBag, CreditCard, Wallet, Save, Loader2, Settings } from 'lucide-react';
-import { toast } from 'sonner'; // <-- IMPORT SONNER
+import { toast } from 'sonner';
 import { 
   useGetOrderConfig, useUpdateOrderConfig,
   useGetPaymentConfig, useUpdatePaymentConfig,
   useGetWalletConfig, useUpdateWalletConfig 
 } from '@/hooks/useSystemConfigs';
 
-// IMPORT TYPE
 import { type OrderConfig, type PaymentConfig, type WalletConfig } from '@/services/configApi';
 
 import { handleErrorToast } from '@/lib/error-handler';
 
-// ==========================================
-// 1. ORDER CONFIG CARD COMPONENT
-// ==========================================
+
 interface OrderConfigCardProps {
   initialData: OrderConfig;
   onSave: (data: OrderConfig) => void;
@@ -62,9 +59,6 @@ function OrderConfigCard({ initialData, onSave, isPending }: OrderConfigCardProp
   );
 }
 
-// ==========================================
-// 2. PAYMENT CONFIG CARD COMPONENT
-// ==========================================
 interface PaymentConfigCardProps {
   initialData: PaymentConfig;
   onSave: (data: PaymentConfig) => void;
@@ -126,9 +120,7 @@ function PaymentConfigCard({ initialData, onSave, isPending }: PaymentConfigCard
   );
 }
 
-// ==========================================
-// 3. WALLET CONFIG CARD COMPONENT
-// ==========================================
+
 interface WalletConfigCardProps {
   initialData: WalletConfig;
   onSave: (data: WalletConfig) => void;
@@ -209,9 +201,7 @@ function WalletConfigCard({ initialData, onSave, isPending }: WalletConfigCardPr
   );
 }
 
-// ==========================================
-// MAIN PAGE COMPONENT
-// ==========================================
+
 export default function SystemConfigurationsPage() {
   const { data: orderData, isLoading: loadingOrder } = useGetOrderConfig();
   const { mutate: updateOrder, isPending: updatingOrder } = useUpdateOrderConfig();
@@ -235,7 +225,6 @@ export default function SystemConfigurationsPage() {
   return (
     <div className="h-full flex flex-col p-6 max-w-5xl mx-auto w-full space-y-6">
       
-      {/* HEADER */}
       <div className="mb-2">
         <h1 className="text-slate-800 font-bold text-2xl tracking-tight flex items-center gap-2">
           <Settings className="w-6 h-6 text-blue-600" />

@@ -27,26 +27,17 @@ const getDifficultyColor = (diff: string) => {
   }
 };
 
-const getDifficultyLabel = (diff: string) => {
-  switch (diff) {
-    case "Basic": return "Cơ bản";
-    case "Intermediate": return "Trung cấp";
-    case "Advanced": return "Nâng cao";
-    default: return diff;
-  }
-};
-
 export const RequirementTable = ({ requirements, isLoading, onEdit, onDelete }: RequirementTableProps) => {
   return (
     <div className="rounded-md border bg-white">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[120px]">Mã Code</TableHead>
-            <TableHead>Độ khó</TableHead>
-            <TableHead>Số lượng Part</TableHead>
-            <TableHead>Trạng thái</TableHead>
-            <TableHead className="text-right">Thao tác</TableHead>
+            <TableHead className="w-[120px]">Code</TableHead>
+            <TableHead>Difficulty</TableHead>
+            <TableHead>Part Quantity</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -59,7 +50,7 @@ export const RequirementTable = ({ requirements, isLoading, onEdit, onDelete }: 
           ) : requirements?.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                Chưa có dữ liệu. Hãy tạo mẫu đầu tiên!
+                No data available. Create your first requirement!
               </TableCell>
             </TableRow>
           ) : (
@@ -68,11 +59,11 @@ export const RequirementTable = ({ requirements, isLoading, onEdit, onDelete }: 
                 <TableCell className="font-mono font-bold text-primary">{req.code}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className={getDifficultyColor(req.difficulty)}>
-                    {getDifficultyLabel(req.difficulty)}
+                    {req.difficulty}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm">
-                  {req.minPartQuantity} - {req.maxPartQuantity} đơn vị
+                  {req.minPartQuantity} - {req.maxPartQuantity} units
                 </TableCell>
                 <TableCell>
                   {req.isActive ? (

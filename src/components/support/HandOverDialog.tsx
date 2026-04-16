@@ -5,27 +5,27 @@ import { ImagePlus, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadApi } from '@/services/uploadApi';
 import { useUpdateHandOverImage } from '@/hooks/useDeliveryQueries';
-import { useUpdateInstockOrderStatus } from '@/hooks/useInstockOrderQueries'; // 👉 IMPORT HOOK ĐỔI STATUS ĐƠN HÀNG
+import { useUpdateInstockOrderStatus } from '@/hooks/useInstockOrderQueries';
 
 interface HandOverDialogProps {
   trackingId: string | null;
-  orderId: string | null; // 👉 Thêm orderId vào đây
+  orderId: string | null;
+  // 👉 THÊM FLAG NÀY ĐỂ BỎ QUA VIỆC UPDATE ORDER STATUS
+  skipOrderStatusUpdate?: boolean; 
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function HandOverDialog({ trackingId, orderId, onClose, onSuccess }: HandOverDialogProps) {
+export function HandOverDialog({ trackingId, orderId, skipOrderStatusUpdate = false, onClose, onSuccess }: HandOverDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Hooks
   const { mutateAsync: updateHandOverImage } = useUpdateHandOverImage();
-  const { mutateAsync: updateOrderStatus } = useUpdateInstockOrderStatus(); // 👉 Khởi tạo hook
+  const { mutateAsync: updateOrderStatus } = useUpdateInstockOrderStatus();
 
   const handleConfirm = async () => {
-    // Check an toàn
     if (!trackingId || !file) return;
     
     setIsSubmitting(true);
@@ -37,17 +37,17 @@ export function HandOverDialog({ trackingId, orderId, onClose, onSuccess }: Hand
       // 2. Cập nhật ảnh vào Tracking Delivery
       await updateHandOverImage({ id: trackingId, imageUrl });
       
-      // 3. Đổi status của Order sang "HandedOverToDelivery" (NẾU CÓ orderId)
-      if (orderId) {
+      // 👉 3. CHỈ UPDATE ORDER NẾU KHÔNG BỊ SKIP
+      if (orderId && !skipOrderStatusUpdate) {
         await updateOrderStatus({ 
           orderId: orderId, 
-         data: { newStatus: 'HandedOverToDelivery' }
+          data: { newStatus: 'HandedOverToDelivery' }
         });
       }
       
       toast.success("Package handed over successfully!");
-      onSuccess(); // Chạy hàm refresh data (đã truyền từ cha vào)
-      handleClose(); // Đóng modal
+      onSuccess(); 
+      handleClose(); 
     } catch (err) {
       console.error(err);
       toast.error('Failed to hand over package. Please try again.');

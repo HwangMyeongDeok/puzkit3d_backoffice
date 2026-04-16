@@ -13,6 +13,7 @@ import type {
   UpdatePartnerProductRequestDto,
   CreatePartnerProductVariantRequestDto,
   UpdatePartnerProductVariantRequestDto,
+  InstockProductVariantDto,
 } from "@/types/types";
 
 // ============================================================================
@@ -155,7 +156,7 @@ export const useCreateInstockProductVariant = () => {
     }: {
       productId: string;
       data: CreateInstockProductVariantRequestDto;
-    }) => managementProductApi.createInstockProductVariant(productId, data),
+    }): Promise<string> => managementProductApi.createInstockProductVariant(productId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: productKeys.variantList(variables.productId),

@@ -5,7 +5,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 
-import { useGetTicketById, useUpdateTicketStatus, type TicketStatus } from '@/services/supportTicketApi';
+// Cần đảm bảo các API hook của bạn trả về đúng type SupportTicketDto
+import { useGetTicketById, useUpdateTicketStatus } from '@/services/supportTicketApi';
+import type { TicketStatus } from '@/services/supportTicketApi'; // Hoặc lấy từ file type nếu bạn đã tách file
 import { useDeliveryTrackings, useCreateDeliveryTracking } from '@/hooks/useDeliveryQueries';
 import { useCustomerOrderById } from '@/hooks/useInstockOrderQueries';
 
@@ -14,7 +16,8 @@ import { TicketActionCard } from './TicketActionCard';
 import { TicketSummaryCard } from './TicketSummaryCard';
 import { TicketShipmentCard } from './TicketShipmentCard';
 import { TicketAffectedItems } from './TicketAffectedItems';
-import type { DeliveryTracking } from '@/services/deliveryApi';
+
+import { handleErrorToast } from '@/lib/error-handler';
 
 interface Props {
   ticketId: string | null;
@@ -27,8 +30,11 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange, onShipmentCre
   // --- Data Fetching Hooks ---
   const { data: ticket, isLoading, error } = useGetTicketById(ticketId, open);
   const { data: orderData } = useCustomerOrderById(ticket?.orderId ?? null);
-  const { data: deliveriesRes, refetch: refetchDeliveries } = useDeliveryTrackings(ticket?.orderId ?? '', open && !!ticket?.orderId);
-  console.log(deliveriesRes);
+  const { data: deliveriesRes, refetch: refetchDeliveries } = useDeliveryTrackings(
+    ticket?.orderId ?? '', 
+    open && !!ticket?.orderId
+  );
+
   // --- Mutations ---
   const { mutateAsync: updateTicketStatusAsync, isPending: isUpdatingTicket } = useUpdateTicketStatus();
   const createDelivery = useCreateDeliveryTracking();
@@ -36,52 +42,61 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange, onShipmentCre
   // --- State ---
   const [handOverDialogTrackingId, setHandOverDialogTrackingId] = useState<string | null>(null);
 
-  const supportShipment = deliveriesRes?.data?.find((d: DeliveryTracking) => d.type === 'Support' && d.supportTicketId === ticket?.id);
-
   // --- Handlers ---
   const handleStatusChange = async (status: TicketStatus) => {
     if (!ticketId) return;
     try {
       await updateTicketStatusAsync({ id: ticketId, status });
       toast.success(`Ticket status updated to ${status}`);
-    } catch (err) {
-      toast.error("Failed to update ticket status");
+    } catch (error) {
+      handleErrorToast(error, "Failed to update ticket status");
     }
   };
 
   const handleCreateShipment = async () => {
     if (!ticket) return;
-    await createDelivery.mutateAsync(
-      { orderId: ticket.orderId, supportTicketId: ticket.id },
-      { onSuccess: () => { refetchDeliveries(); onShipmentCreated?.(); } }
-    );
+    try {
+      await createDelivery.mutateAsync(
+        { orderId: ticket.orderId, supportTicketId: ticket.id },
+        { 
+          onSuccess: () => { 
+            refetchDeliveries(); 
+            onShipmentCreated?.(); 
+          } 
+        }
+      );
+    } catch (error) {
+      handleErrorToast(error, "Failed to create shipment");
+    }
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="flex h-[90vh] max-h-[90vh] w-full max-w-5xl flex-col gap-0 p-0">
-          <DialogHeader className="border-b px-6 py-5 shrink-0 bg-background">
+          <DialogHeader className="bg-background shrink-0 border-b px-6 py-5">
             <DialogTitle className="flex items-center gap-2">
               <Ticket className="h-5 w-5" />
-              {ticket ? `Ticket ${(ticket as any).code ?? ticket.id}` : 'Ticket Details'}
+              {/* Đã xóa (ticket as any), dùng trực tiếp ticket.code do đã update DTO trước đó */}
+              {ticket ? `Ticket ${ticket.code ?? ticket.id}` : 'Ticket Details'}
             </DialogTitle>
             <DialogDescription>
               Full evidence, items, and staff actions for this ticket.
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 overflow-auto bg-muted/10">
-            <div className="px-6 py-5 space-y-5">
+          <ScrollArea className="bg-muted/10 flex-1 overflow-auto">
+            <div className="space-y-5 px-6 py-5">
               {isLoading ? (
                 <div className="space-y-4">
                   <Skeleton className="h-20 w-full" />
                   <div className="grid gap-4 md:grid-cols-2">
-                    <Skeleton className="h-64 w-full" /><Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-64 w-full" />
                   </div>
                 </div>
               ) : error ? (
-                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+                <div className="border-destructive/20 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
                   Failed to load ticket details. Please try again.
                 </div>
               ) : ticket ? (
@@ -96,10 +111,10 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange, onShipmentCre
                     <TicketSummaryCard ticket={ticket} orderData={orderData} />
                     <TicketShipmentCard 
                       ticket={ticket} 
-                      supportShipment={supportShipment} 
+                     deliveries={deliveriesRes?.data || []}
                       isCreating={createDelivery.isPending} 
                       onCreateShipment={handleCreateShipment}
-                      onHandOverClick={setHandOverDialogTrackingId} 
+                      onHandOverClick={setHandOverDialogTrackingId}
                     />
                   </div>
 
@@ -116,11 +131,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange, onShipmentCre
       </Dialog>
 
       <HandOverDialog 
-  trackingId={handOverDialogTrackingId} 
-  orderId={ticket?.orderId}    // 👉 Truyền orderId vào đây
-  onClose={() => setHandOverDialogTrackingId(null)} 
-  onSuccess={() => refetchDeliveries()}
-/>
+        trackingId={handOverDialogTrackingId} 
+        orderId={ticket?.orderId ?? null}
+        skipOrderStatusUpdate={true}
+        onClose={() => setHandOverDialogTrackingId(null)} 
+        onSuccess={() => refetchDeliveries()}
+      />
     </>
   );
 }

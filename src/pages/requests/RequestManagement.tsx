@@ -38,9 +38,7 @@ export default function RequestManagementPage() {
   const filteredData = useMemo(() => {
     if (!responseData?.items) return [];
     
-    return responseData.items.filter(req => {
-      // Đã tháo rào chặn status theo tab ở đây để bảng hiển thị FULL status (kể cả reject, approve)
-      
+    return responseData.items.filter(req => {      
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchCode = req.code?.toLowerCase().includes(query);
@@ -49,7 +47,7 @@ export default function RequestManagementPage() {
       }
       return true;
     });
-  }, [responseData, searchQuery]); // Xóa activeTab khỏi dependency vì không dùng để filter bảng nữa
+  }, [responseData, searchQuery]);
 
   const handleUpdateStatus = (newStatus: string, customNote?: string) => {
     if (!selectedRequest) return;
@@ -68,7 +66,6 @@ export default function RequestManagementPage() {
 
   return (
     <div className="h-full flex flex-col relative w-full">
-      {/* Page Header & Tabs */}
       <div className="flex flex-col mb-6 space-y-4">
         <div>
           <h1 className="text-slate-800 font-bold text-2xl tracking-tight">Request Center</h1>
@@ -95,7 +92,6 @@ export default function RequestManagementPage() {
         </div>
       </div>
         
-      {/* Tool Bar */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="relative w-full sm:w-64">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -110,7 +106,6 @@ export default function RequestManagementPage() {
           />
         </div>
 
-        {/* Shadcn Select Filter (Đã trả lại logic 4 options theo tab) */}
         <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm flex-1 sm:flex-none">
           <Filter className="w-4 h-4 text-slate-400 ml-2 mr-1 shrink-0" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -139,7 +134,6 @@ export default function RequestManagementPage() {
         </div>
       </div>
 
-      {/* Data Table */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex-1 relative">
         {isLoading && (
           <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-20 flex items-center justify-center">
@@ -195,7 +189,6 @@ export default function RequestManagementPage() {
         </div>
       </div>
       
-      {/* Modal / Dialog */}
       <RequestDetailDialog 
         selectedRequest={selectedRequest}
         setSelectedRequest={setSelectedRequest}

@@ -1,112 +1,111 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Package, AlertCircle, Puzzle } from 'lucide-react'; // Thêm icon Puzzle
+import { Settings, Package } from 'lucide-react';
 import type { InstockProductDto } from '@/types/types';
-import { ProductInfoTab } from './ProductInfoTab';
-import { ProductVariantsTab } from './ProductVariantsTab';
-import { ProductPartsTab } from './ProductPartsTab'; // Import thêm Tab Parts sắp tạo
+
+import { ProductInfoTab, type ProductFiles } from './ProductInfoTab/ProductInfoTab';
+import { ProductVariantsTab } from './ProductVariantTab/ProductVariantsTab';
+import type { ProductFormValues } from '@/pages/manager/product-editor/schema';
+import type { VariantDraft } from './ProductVariantTab/PreviewSummary';
 
 interface ProductEditorTabsProps {
   isCreateMode: boolean;
   productId: string | null;
   product?: InstockProductDto;
-  onProductSaved?: (id: string) => void;
 }
 
 export function ProductEditorTabs({
   isCreateMode,
   productId,
   product,
-  onProductSaved,
 }: ProductEditorTabsProps) {
-  // Variants và Parts tab sẽ bị khóa cho đến khi product được lưu (có ID)
-  const isProductSaved = !isCreateMode && productId;
-  const [activeTab, setActiveTab] = useState<'info' | 'variants' | 'parts'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'variants'>('info');
+
+  // Trong ProductEditorTabs.tsx
+  const [productDraftData, setProductDraftData] = useState<Partial<ProductFormValues>>(() => {
+    if (!isCreateMode && product) {
+
+      // Xử lý map drive details chuẩn ngay từ đầu
+      const mappedDrives = product.driveDetails?.length
+        ? product.driveDetails
+        : (product as any).drives?.map((d: any) => ({
+          // Bao phủ các trường hợp API trả về id, driveId, hoặc drive.id
+          driveId: d.driveId || d.drive?.id || d.id,
+          quantity: d.quantity || 1
+        })) || [];
+
+      return {
+        slug: product.slug,
+        name: product.name,
+        description: product.description ?? undefined,
+        difficultLevel: product.difficultLevel as ProductFormValues['difficultLevel'],
+        estimatedBuildTime: product.estimatedBuildTime,
+        totalPieceCount: product.totalPieceCount,
+        thumbnailUrl: product.thumbnailUrl ?? undefined,
+        topicId: product.topicId ?? undefined,
+        materialId: product.materialId ?? undefined,
+        capabilityIds: product.capabilityIds || [],
+        assemblyMethodIds: product.assemblyMethodIds || [],
+
+        // Dùng biến đã map ở trên
+        driveDetails: mappedDrives,
+
+        previewAsset: typeof product.previewAsset === 'object' && !Array.isArray(product.previewAsset) ? product.previewAsset : {},
+        isActive: product.isActive,
+      };
+    }
+    return {};
+  });
+
+  const [productDraftFiles, setProductDraftFiles] = useState<ProductFiles>({ thumbnail: null, previews: [] });
+
+  const [wizardVariantsList, setWizardVariantsList] = useState<VariantDraft[]>([]);
+
+  const isInfoCompleted = Object.keys(productDraftData).length > 0 || !isCreateMode;
+
+  const handleInfoNext = (data: ProductFormValues, files: ProductFiles) => {
+    setProductDraftData(data);
+    setProductDraftFiles(files);
+    setActiveTab('variants');
+  };
+
+  const handleVariantsBack = () => {
+    setActiveTab('info');
+  };
 
   return (
-    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'info' | 'variants' | 'parts')}>
-      {/* Đổi grid-cols-2 thành grid-cols-3 để chứa thêm Tab mới */}
-      <TabsList className="grid w-full grid-cols-3 lg:w-auto">
+    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'info' | 'variants')}>
+      {/* ... Phần render TabsList giữ nguyên ... */}
+      <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
         <TabsTrigger value="info" className="gap-2">
           <Settings className="h-4 w-4" />
           <span className="hidden sm:inline">General Info</span>
         </TabsTrigger>
-
-        <TabsTrigger
-          value="variants"
-          disabled={!isProductSaved}
-          className="gap-2"
-        >
+        <TabsTrigger value="variants" disabled={isCreateMode && !isInfoCompleted} className="gap-2">
           <Package className="h-4 w-4" />
           <span className="hidden sm:inline">Variants</span>
-          {isCreateMode && (
-            <div className="flex items-center gap-1 ml-2 text-xs text-yellow-600 dark:text-yellow-500">
-              <AlertCircle className="h-3 w-3" />
-              <span className="hidden sm:inline">Save first</span>
-            </div>
-          )}
-        </TabsTrigger>
-
-        {/* --- TAB PARTS MỚI THÊM --- */}
-        <TabsTrigger
-          value="parts"
-          disabled={!isProductSaved}
-          className="gap-2"
-        >
-          <Puzzle className="h-4 w-4" />
-          <span className="hidden sm:inline">Parts</span>
-          {isCreateMode && (
-            <div className="flex items-center gap-1 ml-2 text-xs text-yellow-600 dark:text-yellow-500">
-              <AlertCircle className="h-3 w-3" />
-              <span className="hidden sm:inline">Save first</span>
-            </div>
-          )}
         </TabsTrigger>
       </TabsList>
 
-      {/* Product Info Tab */}
       <TabsContent value="info" className="mt-6">
         <ProductInfoTab
           isCreateMode={isCreateMode}
-          productId={productId}
-          product={product}
-          onProductSaved={(id: string) => {
-            onProductSaved?.(id);
-            // Sau khi tạo xong, mình có thể cho nó tự nhảy sang tab Parts hoặc Variants tùy ý
-            // Ở đây giữ nguyên luồng cũ của ông là nhảy sang Variants
-            if (isCreateMode) {
-              setActiveTab('variants');
-            }
-          }}
+          initialData={productDraftData}
+          initialFiles={productDraftFiles}
+          onNextStep={handleInfoNext}
         />
       </TabsContent>
 
-      {/* Variants Tab */}
       <TabsContent value="variants" className="mt-6">
-        {isProductSaved && productId ? (
-          <ProductVariantsTab productId={productId} />
-        ) : (
-          <div className="rounded-lg border border-dashed p-8 text-center">
-            <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">
-              Save the product first to manage variants.
-            </p>
-          </div>
-        )}
-      </TabsContent>
-
-      {/* Parts Tab Content MỚI THÊM */}
-      <TabsContent value="parts" className="mt-6">
-        {isProductSaved && productId ? (
-          <ProductPartsTab productId={productId} />
-        ) : (
-          <div className="rounded-lg border border-dashed p-8 text-center">
-            <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">
-              Save the product first to manage parts.
-            </p>
-          </div>
-        )}
+        <ProductVariantsTab
+          isCreateMode={isCreateMode}
+          productId={productId}
+          productDraftData={productDraftData}
+          productDraftFiles={productDraftFiles}
+          onBack={handleVariantsBack}
+          wizardVariantsList={wizardVariantsList}
+          setWizardVariantsList={setWizardVariantsList}
+        />
       </TabsContent>
     </Tabs>
   );

@@ -137,8 +137,6 @@ const GHN_STATUS_MAP: Record<string, { label: string; color: string }> = {
   damage: { label: 'Damaged / Lost', color: 'text-red-800' },
 };
 
-// ─── Delivery Tracking Types ──────────────────────────────────────────────────
-
 interface DeliveryTrackingDetail {
   id: string;
   type: string;
@@ -169,8 +167,6 @@ interface DeliveryTrackingResponse {
   totalPages: number;
   data: DeliveryTracking[];
 }
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
 
 const getImageUrl = (path: string | null) => {
   if (!path) return '';
@@ -248,6 +244,7 @@ const getDeliveryStatusColor = (status: string): string => {
   }
   return 'bg-secondary text-secondary-foreground';
 };
+
 const PARTNER_STATUS_LABELS: Record<string, string> = {
   Pending: 'Pending',
   Paid: 'Paid',
@@ -383,7 +380,6 @@ const getPartnerPrimaryAction = (
       return null;
   }
 };
-// ─── Shared small components ──────────────────────────────────────────────────
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex items-start justify-between gap-4 text-sm">
@@ -453,8 +449,6 @@ function OrderStatsCard({
   );
 }
 
-// ─── Shipping Timeline ────────────────────────────────────────────────────────
-
 interface TrackingLog {
   status: string;
   updatedDate?: string | null;
@@ -507,8 +501,6 @@ function ShippingTimeline({
   );
 }
 
-// ─── Waybill Button ───────────────────────────────────────────────────────────
-
 interface WaybillResponse {
   waybillUrl: string;
 }
@@ -539,8 +531,6 @@ function PrintWaybillButton({ orderId }: { orderId: string }) {
     </Button>
   );
 }
-
-// ─── Debug Mode Panel ─────────────────────────────────────────────────────────
 
 function DebugModePanel({
   orderId,
@@ -597,8 +587,6 @@ function DebugModePanel({
     </div>
   );
 }
-
-// ─── Delivery Tracking Section ────────────────────────────────────────────────
 
 function DeliveryTrackingSection({
   orderId,
@@ -690,28 +678,28 @@ function DeliveryTrackingSection({
   const [successCreate, setSuccessCreate] = useState(false);
 
   const handleCreateDelivery = () => {
-  setSubmittingCreate(true);
+    setSubmittingCreate(true);
 
-  const payload: CreateDeliveryTrackingDto = {
-    orderId,
-    supportTicketId: null,
+    const payload: CreateDeliveryTrackingDto = {
+      orderId,
+      supportTicketId: null,
+    };
+
+    createTracking(payload, {
+      onSuccess: async () => {
+        setSuccessCreate(true);
+        toast.success('Delivery tracking created successfully.');
+        setEnabled(true);
+        await refetch();
+        setSubmittingCreate(false);
+      },
+      onError: (err) => {
+        toast.error('Failed to create delivery tracking');
+        console.error(err);
+        setSubmittingCreate(false);
+      },
+    });
   };
-
-  createTracking(payload, {
-    onSuccess: async () => {
-      setSuccessCreate(true);
-      toast.success('Delivery tracking created successfully.');
-      setEnabled(true);
-      await refetch();
-      setSubmittingCreate(false);
-    },
-    onError: (err) => {
-      toast.error('Failed to create delivery tracking');
-      console.error(err);
-      setSubmittingCreate(false);
-    },
-  });
-};
 
   if (!enabled) {
     return (
@@ -940,7 +928,7 @@ function DeliveryTrackingSection({
                 </p>
 
                 {tracking.id === firstTracking?.id && isFetchingDetail && (
-                  <span className="flex items-center text-xs text-blue-500 animate-pulse">
+                  <span className="flex items-center animate-pulse text-xs text-blue-500">
                     <Loader2 className="mr-1 h-3 w-3 animate-spin" /> Loading detail...
                   </span>
                 )}
@@ -1046,8 +1034,6 @@ function DeliveryTrackingSection({
     </div>
   );
 }
-
-// ─── Instock Order Detail Content ─────────────────────────────────────────────
 
 function OrderDetailContent({
   order,
@@ -1268,8 +1254,6 @@ function OrderDetailContent({
     </div>
   );
 }
-
-// ─── Partner Order Detail Content ─────────────────────────────────────────────
 
 function PartnerDeliveryStatusPanel({
   order,
@@ -1726,6 +1710,7 @@ function PartnerOrderRow({
 function trackingStatusLabel(status: string) {
   return GHN_STATUS_MAP[status]?.label || status;
 }
+
 function OrderDetailSkeleton() {
   return (
     <div className="space-y-4">
@@ -2306,6 +2291,7 @@ export function OrderManagement() {
           </CardContent>
         </Card>
       )}
+
       <OrderDetailDialog
         orderId={selectedOrderId}
         open={dialogOpen}
