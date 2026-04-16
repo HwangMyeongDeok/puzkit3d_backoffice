@@ -155,7 +155,7 @@ export function PartnerProductEditPage() {
         setQuantityInput(String(productData.quantity));
       } catch (error) {
         console.error(error);
-        toast.error("Không thể tải thông tin sản phẩm.");
+        toast.error("Unable to load product information.");
       } finally {
         setLoading(false);
       }
@@ -254,19 +254,19 @@ export function PartnerProductEditPage() {
     } = {};
 
     if (!formData.partnerId) {
-      errors.partnerId = "Vui lòng chọn đối tác.";
+      errors.partnerId = "Please select a partner.";
     }
 
     if (!formData.name.trim()) {
-      errors.name = "Vui lòng nhập tên sản phẩm.";
+      errors.name = "Please enter the product name.";
     }
 
     if (formData.quantity < 0) {
-      errors.quantity = "Số lượng phải lớn hơn hoặc bằng 0.";
+      errors.quantity = "Quantity must be greater than or equal to 0.";
     }
 
     if (!thumbnailFile && !formData.thumbnailUrl.trim()) {
-      errors.thumbnailUrl = "Vui lòng chọn ảnh thumbnail.";
+      errors.thumbnailUrl = "Please select a thumbnail image.";
     }
 
     setFieldErrors(errors);
@@ -318,24 +318,24 @@ export function PartnerProductEditPage() {
       };
 
       await updatePartnerProduct(id, payload);
-      toast.success("Cập nhật sản phẩm đối tác thành công.");
+      toast.success("Partner product updated successfully.");
       navigate("/partner-products");
     } catch (error: any) {
       console.error("[UpdatePartnerProduct] failed", error);
       console.error("[UpdatePartnerProduct] response status", error?.response?.status);
       console.error("[UpdatePartnerProduct] response data", error?.response?.data);
-      toast.error("Cập nhật sản phẩm đối tác thất bại.");
+      toast.error("Failed to update partner product.");
     } finally {
       setSubmitting(false);
     }
   };
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Đang tải dữ liệu...</div>;
+    return <div className="text-sm text-muted-foreground">Loading data...</div>;
   }
 
   if (!product) {
-    return <div className="text-sm text-red-500">Không tìm thấy sản phẩm.</div>;
+    return <div className="text-sm text-red-500">Product not found.</div>;
   }
 
   return (

@@ -40,6 +40,16 @@ function buildImportServiceLabel(config: ImportServiceConfigDto) {
   return `${config.countryName} (${config.countryCode})`;
 }
 
+function slugifyFromName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function PartnerApprovals() {
   const [partners, setPartners] = useState<PartnerDto[]>([]);
   const [serviceConfigs, setServiceConfigs] = useState<ImportServiceConfigDto[]>(
@@ -69,6 +79,13 @@ export function PartnerApprovals() {
   const serviceConfigMap = useMemo(() => {
     return new Map(serviceConfigs.map((item) => [item.id, item]));
   }, [serviceConfigs]);
+
+  const selectedCountryCode = useMemo(() => {
+    if (!formData.importServiceConfigId) return "";
+    return (
+      serviceConfigMap.get(formData.importServiceConfigId)?.countryCode ?? ""
+    );
+  }, [formData.importServiceConfigId, serviceConfigMap]);
 
   const selectableConfigs = useMemo(() => {
     const activeConfigs = serviceConfigs.filter((item) => item.isActive);
@@ -104,7 +121,7 @@ export function PartnerApprovals() {
       setServiceConfigs(configData.items);
     } catch (err) {
       console.error(err);
-      setError("Không thể tải danh sách đối tác.");
+      setError("Unable to load partners.");
     } finally {
       setLoading(false);
     }
@@ -147,6 +164,38 @@ export function PartnerApprovals() {
   };
 
   const handleChange = (field: keyof UpsertPartnerRequest, value: string) => {
+    if (field === "name") {
+      setFormData((prev) => ({
+        ...prev,
+        name: value,
+      }));
+
+      setFieldErrors((prev) => ({
+        ...prev,
+        name: undefined,
+      }));
+      return;
+    }
+
+    if (field === "contactPhone") {
+      const digitsOnly = value.replace(/\D/g, "").slice(0, 10);
+
+      setFormData((prev) => ({
+        ...prev,
+        contactPhone: digitsOnly,
+      }));
+
+      setFieldErrors((prev) => ({
+        ...prev,
+        contactPhone: undefined,
+      }));
+      return;
+    }
+
+    if (field === "slug") {
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -155,6 +204,13 @@ export function PartnerApprovals() {
     setFieldErrors((prev) => ({
       ...prev,
       [field]: undefined,
+    }));
+  };
+
+  const handleNameBlur = () => {
+    setFormData((prev) => ({
+      ...prev,
+      slug: slugifyFromName(prev.name),
     }));
   };
 
@@ -172,11 +228,11 @@ export function PartnerApprovals() {
 
     if (!formData.importServiceConfigId) {
       errors.importServiceConfigId =
-        "Vui lòng chọn cấu hình dịch vụ nhập khẩu.";
+        "Please select an import service configuration.";
     }
 
     if (!normalizedName) {
-      errors.name = "Vui lòng nhập tên đối tác.";
+      errors.name = "Please enter the partner name.";
     } else {
       const duplicatedName = partners.some(
         (partner) =>
@@ -185,17 +241,17 @@ export function PartnerApprovals() {
       );
 
       if (duplicatedName) {
-        errors.name = "Tên đối tác đã tồn tại.";
+        errors.name = "Partner name already exists.";
       }
     }
 
     if (!normalizedEmail) {
-      errors.contactEmail = "Vui lòng nhập email.";
+      errors.contactEmail = "Please enter an email address.";
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
       if (!emailRegex.test(normalizedEmail)) {
-        errors.contactEmail = "Email không đúng định dạng.";
+        errors.contactEmail = "Invalid email format.";
       } else {
         const duplicatedEmail = partners.some(
           (partner) =>
@@ -204,19 +260,15 @@ export function PartnerApprovals() {
         );
 
         if (duplicatedEmail) {
-          errors.contactEmail = "Email đã tồn tại.";
+          errors.contactEmail = "Email already exists.";
         }
       }
     }
 
     if (!normalizedPhone) {
-      errors.contactPhone = "Vui lòng nhập số điện thoại.";
-    } else {
-      const phoneRegex = /^\d{10}$/;
-
-      if (!phoneRegex.test(normalizedPhone)) {
-        errors.contactPhone = "Số điện thoại phải gồm đúng 10 chữ số.";
-      }
+      errors.contactPhone = "Please enter a phone number.";
+    } else if (!/^\d{10}$/.test(normalizedPhone)) {
+      errors.contactPhone = "Phone number must contain exactly 10 digits.";
     }
 
     setFieldErrors(errors);
@@ -224,18 +276,31 @@ export function PartnerApprovals() {
   };
 
   const handleSubmit = async () => {
+    const generatedSlug = slugifyFromName(formData.name);
+
+    const payload: UpsertPartnerRequest = {
+      ...formData,
+      slug: generatedSlug,
+      contactPhone: formData.contactPhone.trim(),
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      slug: generatedSlug,
+    }));
+
     if (!validateForm()) return;
 
     try {
       setSubmitting(true);
 
       if (modalMode === "create") {
-        await createPartner(formData);
-        toast.success("Thêm đối tác thành công.");
+        await createPartner(payload);
+        toast.success("Partner created successfully.");
       } else {
         if (!selectedPartnerId) return;
-        await updatePartner(selectedPartnerId, formData);
-        toast.success("Cập nhật đối tác thành công.");
+        await updatePartner(selectedPartnerId, payload);
+        toast.success("Partner updated successfully.");
       }
 
       closeModal();
@@ -244,8 +309,8 @@ export function PartnerApprovals() {
       console.error(err);
       toast.error(
         modalMode === "create"
-          ? "Thêm đối tác thất bại."
-          : "Cập nhật đối tác thất bại."
+          ? "Failed to create partner."
+          : "Failed to update partner."
       );
     } finally {
       setSubmitting(false);
@@ -256,15 +321,15 @@ export function PartnerApprovals() {
     try {
       if (partner.isActive) {
         const confirmed = window.confirm(
-          `Bạn có chắc muốn vô hiệu hóa đối tác "${partner.name}" không?`
+          `Are you sure you want to disable partner "${partner.name}"?`
         );
         if (!confirmed) return;
 
         await disablePartner(partner.id);
-        toast.success("Vô hiệu hóa đối tác thành công.");
+        toast.success("Partner disabled successfully.");
       } else {
         await enablePartner(partner.id);
-        toast.success("Kích hoạt đối tác thành công.");
+        toast.success("Partner enabled successfully.");
       }
 
       await fetchData();
@@ -272,8 +337,8 @@ export function PartnerApprovals() {
       console.error(err);
       toast.error(
         partner.isActive
-          ? "Vô hiệu hóa đối tác thất bại."
-          : "Kích hoạt đối tác thất bại."
+          ? "Failed to disable partner."
+          : "Failed to enable partner."
       );
     }
   };
@@ -281,9 +346,9 @@ export function PartnerApprovals() {
   return (
     <div className="relative flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Quản lý đối tác</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Partner Manager</h1>
         <p className="text-muted-foreground">
-          Quản lý danh sách đối tác và cấu hình nhập khẩu tương ứng.
+          Manage partners and their corresponding import service configuration.
         </p>
       </div>
 
@@ -296,15 +361,13 @@ export function PartnerApprovals() {
             className="inline-flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Thêm đối tác
+            Add partner
           </Button>
         </div>
       )}
 
       {loading && (
-        <div className="text-sm text-muted-foreground">
-          Đang tải danh sách đối tác...
-        </div>
+        <div className="text-sm text-muted-foreground">Loading partners...</div>
       )}
 
       {error && <div className="text-sm text-red-500">{error}</div>}
@@ -325,7 +388,9 @@ export function PartnerApprovals() {
               >
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
-                    <CardTitle className="line-clamp-1">{partner.name}</CardTitle>
+                    <CardTitle className="line-clamp-1">
+                      {partner.name}
+                    </CardTitle>
 
                     <span
                       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${
@@ -334,12 +399,12 @@ export function PartnerApprovals() {
                           : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                       }`}
                     >
-                      {partner.isActive ? "Đang hoạt động" : "Đã vô hiệu hóa"}
+                      {partner.isActive ? "Active" : "Disabled"}
                     </span>
                   </div>
 
                   <CardDescription className="line-clamp-2">
-                    {partner.description}
+                    {partner.description || "No description"}
                   </CardDescription>
                 </CardHeader>
 
@@ -349,16 +414,19 @@ export function PartnerApprovals() {
                       <strong>Email:</strong> {partner.contactEmail}
                     </p>
                     <p>
-                      <strong>Số điện thoại:</strong> {partner.contactPhone}
+                      <strong>Phone:</strong>{" "}
+                      {matchedConfig?.countryCode
+                        ? `${matchedConfig.countryCode} ${partner.contactPhone}`
+                        : partner.contactPhone}
                     </p>
                     <p>
-                      <strong>Địa chỉ:</strong> {partner.address}
+                      <strong>Address:</strong> {partner.address}
                     </p>
                     <p>
                       <strong>Slug:</strong> {partner.slug}
                     </p>
                     <p>
-                      <strong>Cấu hình nhập khẩu:</strong>{" "}
+                      <strong>Import service config:</strong>{" "}
                       {matchedConfig
                         ? buildImportServiceLabel(matchedConfig)
                         : partner.importServiceConfigId}
@@ -371,7 +439,7 @@ export function PartnerApprovals() {
                       onClick={() => openUpdateModal(partner)}
                     >
                       <Pencil className="mr-2 h-4 w-4" />
-                      Cập nhật
+                      Update
                     </Button>
 
                     <Button
@@ -380,7 +448,7 @@ export function PartnerApprovals() {
                       onClick={() => handleToggleStatus(partner)}
                     >
                       <Power className="mr-2 h-4 w-4" />
-                      {partner.isActive ? "Vô hiệu hóa" : "Kích hoạt"}
+                      {partner.isActive ? "Disable" : "Enable"}
                     </Button>
                   </div>
                 </CardContent>
@@ -397,13 +465,13 @@ export function PartnerApprovals() {
               <div>
                 <h2 className="text-2xl font-bold">
                   {modalMode === "create"
-                    ? "Thêm đối tác mới"
-                    : "Cập nhật đối tác"}
+                    ? "Add new partner"
+                    : "Update partner"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {modalMode === "create"
-                    ? "Nhập thông tin để tạo đối tác mới."
-                    : "Chỉnh sửa thông tin đối tác."}
+                    ? "Enter the information to create a new partner."
+                    : "Edit the partner information."}
                 </p>
               </div>
 
@@ -419,12 +487,13 @@ export function PartnerApprovals() {
             <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Tên đối tác</label>
+                  <label className="text-sm font-medium">Partner name</label>
                   <input
                     className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData.name}
                     onChange={(e) => handleChange("name", e.target.value)}
-                    placeholder="Nhập tên đối tác"
+                    onBlur={handleNameBlur}
+                    placeholder="Enter partner name"
                   />
                   {fieldErrors.name && (
                     <p className="text-sm text-red-500">{fieldErrors.name}</p>
@@ -432,14 +501,14 @@ export function PartnerApprovals() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Email liên hệ</label>
+                  <label className="text-sm font-medium">Contact email</label>
                   <input
                     className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData.contactEmail}
                     onChange={(e) =>
                       handleChange("contactEmail", e.target.value)
                     }
-                    placeholder="Nhập email liên hệ"
+                    placeholder="Enter contact email"
                   />
                   {fieldErrors.contactEmail && (
                     <p className="text-sm text-red-500">
@@ -449,18 +518,29 @@ export function PartnerApprovals() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Số điện thoại</label>
-                  <input
-                    className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.contactPhone}
-                    onChange={(e) =>
-                      handleChange(
-                        "contactPhone",
-                        e.target.value.replace(/\D/g, "").slice(0, 10)
-                      )
-                    }
-                    placeholder="Nhập số điện thoại"
-                  />
+                  <label className="text-sm font-medium">Phone number</label>
+
+                  <div className="flex items-center rounded-lg border focus-within:ring-2 focus-within:ring-blue-500">
+                    <div className="border-r bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                      {selectedCountryCode || "--"}
+                    </div>
+                    <input
+                      className="w-full rounded-r-lg px-3 py-2 outline-none"
+                      value={formData.contactPhone}
+                      onChange={(e) =>
+                        handleChange("contactPhone", e.target.value)
+                      }
+                      placeholder="Enter 10-digit phone number"
+                      inputMode="numeric"
+                      maxLength={10}
+                    />
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Country code is displayed separately. Only the 10-digit local
+                    phone number will be sent to the backend.
+                  </p>
+
                   {fieldErrors.contactPhone && (
                     <p className="text-sm text-red-500">
                       {fieldErrors.contactPhone}
@@ -471,37 +551,37 @@ export function PartnerApprovals() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Slug</label>
                   <input
-                    className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-lg border bg-slate-50 px-3 py-2 text-slate-600 outline-none"
                     value={formData.slug}
-                    onChange={(e) => handleChange("slug", e.target.value)}
-                    placeholder="Nhập slug"
+                    readOnly
+                    placeholder="Slug is generated automatically"
                   />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Địa chỉ</label>
+                  <label className="text-sm font-medium">Address</label>
                   <input
                     className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData.address}
                     onChange={(e) => handleChange("address", e.target.value)}
-                    placeholder="Nhập địa chỉ"
+                    placeholder="Enter address"
                   />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Mô tả</label>
+                  <label className="text-sm font-medium">Description</label>
                   <textarea
                     className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                     rows={4}
                     value={formData.description}
                     onChange={(e) => handleChange("description", e.target.value)}
-                    placeholder="Nhập mô tả"
+                    placeholder="Enter description"
                   />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium">
-                    Cấu hình dịch vụ nhập khẩu
+                    Import service configuration
                   </label>
 
                   <select
@@ -511,12 +591,14 @@ export function PartnerApprovals() {
                       handleChange("importServiceConfigId", e.target.value)
                     }
                   >
-                    <option value="">-- Chọn cấu hình nhập khẩu --</option>
+                    <option value="">
+                      -- Select an import service configuration --
+                    </option>
 
                     {selectableConfigs.map((config) => (
                       <option key={config.id} value={config.id}>
                         {buildImportServiceLabel(config)}
-                        {!config.isActive ? " - Ngừng hoạt động" : ""}
+                        {!config.isActive ? " - Inactive" : ""}
                       </option>
                     ))}
                   </select>
@@ -532,14 +614,14 @@ export function PartnerApprovals() {
 
             <div className="flex justify-end gap-3 border-t px-6 py-4">
               <Button variant="outline" onClick={closeModal}>
-                Hủy
+                Cancel
               </Button>
               <Button onClick={handleSubmit} disabled={submitting}>
                 {submitting
-                  ? "Đang xử lý..."
+                  ? "Processing..."
                   : modalMode === "create"
-                  ? "Thêm đối tác"
-                  : "Lưu cập nhật"}
+                  ? "Add partner"
+                  : "Save changes"}
               </Button>
             </div>
           </div>
