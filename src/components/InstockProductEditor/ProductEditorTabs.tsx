@@ -21,22 +21,35 @@ export function ProductEditorTabs({
 }: ProductEditorTabsProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'variants'>('info');
 
+  // Trong ProductEditorTabs.tsx
   const [productDraftData, setProductDraftData] = useState<Partial<ProductFormValues>>(() => {
     if (!isCreateMode && product) {
+
+      // Xử lý map drive details chuẩn ngay từ đầu
+      const mappedDrives = product.driveDetails?.length
+        ? product.driveDetails
+        : (product as any).drives?.map((d: any) => ({
+          // Bao phủ các trường hợp API trả về id, driveId, hoặc drive.id
+          driveId: d.driveId || d.drive?.id || d.id,
+          quantity: d.quantity || 1
+        })) || [];
+
       return {
         slug: product.slug,
         name: product.name,
-        description: product.description ?? undefined, 
+        description: product.description ?? undefined,
         difficultLevel: product.difficultLevel as ProductFormValues['difficultLevel'],
         estimatedBuildTime: product.estimatedBuildTime,
         totalPieceCount: product.totalPieceCount,
         thumbnailUrl: product.thumbnailUrl ?? undefined,
         topicId: product.topicId ?? undefined,
         materialId: product.materialId ?? undefined,
-        // Cập nhật mảng thay vì string số ít
         capabilityIds: product.capabilityIds || [],
         assemblyMethodIds: product.assemblyMethodIds || [],
-        driveDetails: product.driveDetails || [],
+
+        // Dùng biến đã map ở trên
+        driveDetails: mappedDrives,
+
         previewAsset: typeof product.previewAsset === 'object' && !Array.isArray(product.previewAsset) ? product.previewAsset : {},
         isActive: product.isActive,
       };

@@ -31,7 +31,7 @@ export type Material = CatalogItem;
 export type Capability = CatalogItem;
 
 // 3. Products (Matching API JSON)
-export type DifficultLevel = "Basic" | "Intermediate" | "Advanced";
+export type DifficultLevel = "Basic" | "Intermediate" | "Advanced" | "Expert";
 export type PartType = 'Structural' | 'Mechanical' | 'Decorative';
 
 export interface Part {
@@ -127,7 +127,38 @@ export interface UpdateInstockPriceRequestDto {
 
 export interface DriveDetailDto {
   driveId: string;
+  driveName: string;
   quantity: number;
+}
+export interface Drive {
+  id: string;
+  name: string;
+  description: string | null;
+  minVolume: number;
+  quantityInStock: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Interface dành cho các tham số (query parameters) khi gọi API
+export interface GetDrivesParams {
+  pageNumber: number;
+  pageSize: number;
+  searchTerm?: string;
+  isActive?: boolean;
+  ascending: boolean;
+}
+
+// Interface dành cho dữ liệu trả về có phân trang (Pagination)
+export interface DrivePagedResult {
+  items: Drive[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
 }
 
 export interface CreateInstockProductRequestDto {
@@ -244,6 +275,7 @@ export interface InstockProductVariantDto {
   assembledLengthMm: number;
   assembledWidthMm: number;
   assembledHeightMm: number;
+  previewImages: string[];
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -341,6 +373,7 @@ export interface InstockOrderProductDetailsDto {
   productId: string;
   code: string;
   name: string;
+  slug: string; // 👉 Đã thêm slug từ JSON
   description: string;
   difficultLevel: string;
   estimatedBuildTime: number;
@@ -355,9 +388,11 @@ export interface InstockOrderVariantDetailsDto {
   assembledLengthMm: number;
   assembledWidthMm: number;
   assembledHeightMm: number;
+  previewImages?: string[]; // 👉 Đổi thành optional vì JSON không có
   isActive: boolean;
 }
 
+// Nếu bạn chưa định nghĩa DriveDetailDto thì nhớ giữ lại file import của nó nhé
 export interface InstockOrderDetailDto {
   id: string;
   variantId: string;
@@ -366,6 +401,7 @@ export interface InstockOrderDetailDto {
   variantName: string;
   unitPrice: number;
   quantity: number;
+  driveDetails?: DriveDetailDto[]; // 👉 Đổi thành optional vì JSON order mặc định chưa kèm drive
   totalAmount: number;
   priceName: string;
   thumbnailUrl: string;
@@ -387,14 +423,14 @@ export interface InstockCustomerOrderDto {
   shippingFee: number;
   usedCoinAmount: number;
   grandTotalAmount: number;
-  status: InstockOrderStatus;
+  status: InstockOrderStatus; // Nhớ đảm bảo InstockOrderStatus là enum/type hợp lệ
   paymentMethod: string;
   isPaid: boolean;
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
-  deliveryOrderCode: string;
-  expectedDeliveryDate: string | null;
+  deliveryOrderCode?: string | null; // 👉 Thêm optional vì JSON không có
+  expectedDeliveryDate?: string | null; // 👉 JSON không có lúc khởi tạo
   orderDetails: InstockOrderDetailDto[];
 }
 

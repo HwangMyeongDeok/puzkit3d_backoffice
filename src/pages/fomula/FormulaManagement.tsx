@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Calculator, Pencil, Trash2, Plus, FunctionSquare, Delete, X } from 'lucide-react';
 import { toast } from 'sonner';
 

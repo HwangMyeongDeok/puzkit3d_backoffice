@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   ShoppingBag, Truck, Phone, CreditCard, Package2, ShieldAlert, PlusCircle, Loader2, MapPin, CheckCircle2
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,14 +13,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { type InstockCustomerOrderDto } from '@/types/types';
 import { type InstockOrderDeliveryTrackingDto } from '@/types/types';
 
-// Utils, Constants & Hooks (Đảm bảo import đúng đường dẫn của ông)
+// Utils, Constants & Hooks
 import { formatCurrency, formatDateTime } from './utils';
 import { PrintWaybillButton } from './PrintWaybillButton';
-import { INSTOCK_ORDER_KEYS } from '@/hooks/useInstockOrderQueries'; // Lấy key chuẩn để xóa cache
+import { INSTOCK_ORDER_KEYS } from '@/hooks/useInstockOrderQueries'; 
 import { useCreateDeliveryTracking } from '@/hooks/useDeliveryQueries'; 
 
-// 👉 TÁI SỬ DỤNG LẠI COMPONENT NÀY TỪ PHẦN SUPPORT
+// 👉 IMPORT COMPONENTS
 import { HandOverDialog } from '@/components/support/HandOverDialog'; 
+import { MediaViewer } from '@/components/support/MediaViewer'; // 👉 Thêm MediaViewer vào đây (Nhớ sửa lại path cho đúng thư mục của bạn nhé)
 
 const InfoRow = ({ label, value }: { label: string; value: string | React.ReactNode }) => (
   <div className="flex items-start justify-between gap-4 text-sm">
@@ -41,14 +42,12 @@ export function OrderDetailContent({
   const queryClient = useQueryClient();
   const createDelivery = useCreateDeliveryTracking();
   
-  // 👉 STATE MỚI ĐỂ QUẢN LÝ DIALOG HAND OVER
   const [handOverDialogTrackingId, setHandOverDialogTrackingId] = useState<string | null>(null);
 
   const fullAddress = [order.detailAddress, order.customerWardName, order.customerDistrictName, order.customerProvinceName]
     .filter(Boolean)
     .join(', ');
 
-  // Hàm xử lý tạo Shipment
   const handleCreateShipment = async () => {
     try {
       await createDelivery.mutateAsync({ 
@@ -57,8 +56,6 @@ export function OrderDetailContent({
       });
       
       toast.success('Original shipment created successfully!');
-      
-      // 👉 SỬA LẠI ĐOẠN NÀY: Dùng đúng function sinh Key của ông thì nó mới nhận diện và tự load lại data liền
       queryClient.invalidateQueries({ queryKey: INSTOCK_ORDER_KEYS.deliveryTracking(order.id) });
     } catch (error) {
       console.error(error);
@@ -131,8 +128,8 @@ export function OrderDetailContent({
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {deliveries.map((delivery) => {
+            <div className="flex flex-col gap-4">
+              {deliveries.map((delivery) => {
               const isReadyToPick = delivery.status === "ReadyToPick";
               const hasHandOverImage = !!delivery.handOverImageUrl;
 
@@ -182,15 +179,14 @@ export function OrderDetailContent({
                       <InfoRow label="Delivered At" value={formatDateTime(delivery.deliveredAt)} />
                     )}
                     
+                    {/* 👉 ĐÃ THAY THẾ BẰNG MEDIA VIEWER */}
                     {hasHandOverImage && (
                       <div className="mt-3 space-y-1">
                         <span className="text-muted-foreground text-sm flex items-center gap-1 font-medium">
                           <MapPin className="h-3.5 w-3.5" /> Proof of Handover:
                         </span>
-                        <div className="mt-2 rounded-md border overflow-hidden">
-                          <a href={delivery.handOverImageUrl!} target="_blank" rel="noopener noreferrer">
-                            <img src={delivery.handOverImageUrl!} alt="Handover" className="w-full max-h-[200px] object-cover transition-opacity hover:opacity-90" />
-                          </a>
+                        <div className="mt-2">
+                          <MediaViewer proofData={delivery.handOverImageUrl} />
                         </div>
                       </div>
                     )}
@@ -202,7 +198,7 @@ export function OrderDetailContent({
         )}
       </div>
 
-      {/* Payment & Items Cards (Giữ nguyên như cũ) */}
+      {/* Payment & Items Cards */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -226,22 +222,54 @@ export function OrderDetailContent({
         </CardHeader>
         <CardContent className="space-y-4">
           {order.orderDetails.map((detail) => (
-             /* Code render items giữ nguyên */
-             <div key={detail.id} className="rounded-lg border p-4">...</div>
+            <div key={detail.id} className="flex items-start gap-4 rounded-lg border p-4">
+              {/* Thumbnail */}
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-muted">
+                {detail.thumbnailUrl ? (
+                  <img
+                    src={detail.thumbnailUrl}
+                    alt={detail.productName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Package2 className="h-6 w-6 text-muted-foreground/40" />
+                  </div>
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0 space-y-1">
+                <p className="text-sm font-semibold leading-tight truncate">{detail.productName}</p>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                  {detail.variantName && <span>Color: {detail.variantName}</span>}
+                  {detail.sku && <span>• SKU: <span className="font-mono">{detail.sku}</span></span>}
+                  {detail.priceName && <span>• Price: {detail.priceName}</span>}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {formatCurrency(detail.unitPrice)} × {detail.quantity}
+                </p>
+              </div>
+
+              {/* Total */}
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-bold text-emerald-600">{formatCurrency(detail.totalAmount)}</p>
+              </div>
+            </div>
           ))}
         </CardContent>
       </Card>
 
-      {/* 👉 NHÚNG DIALOG UPLOAD ẢNH VÀO DƯỚI CÙNG COMPONENT */}
+      {/* Dialog Hand Over */}
       <HandOverDialog 
-  trackingId={handOverDialogTrackingId} 
-  orderId={order.id}    // 👉 Truyền orderId vào đây
-  onClose={() => setHandOverDialogTrackingId(null)} 
-  onSuccess={() => {
-    queryClient.invalidateQueries({ queryKey: INSTOCK_ORDER_KEYS.detail(order.id) });
-    queryClient.invalidateQueries({ queryKey: INSTOCK_ORDER_KEYS.deliveryTracking(order.id) });
-  }}
-/>
+        trackingId={handOverDialogTrackingId} 
+        orderId={order.id}
+        onClose={() => setHandOverDialogTrackingId(null)} 
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: INSTOCK_ORDER_KEYS.detail(order.id) });
+          queryClient.invalidateQueries({ queryKey: INSTOCK_ORDER_KEYS.deliveryTracking(order.id) });
+        }}
+      />
     </div>
   );
 }

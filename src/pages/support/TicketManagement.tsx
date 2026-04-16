@@ -12,6 +12,7 @@ import { useGetTickets, useDeleteTicket } from '@/services/supportTicketApi';
 import { PAGE_SIZE, ALL_STATUS, STATUS_FILTER_OPTIONS } from '@/components/support/constants';
 import { TicketRow, TableRowSkeleton } from '@/components/support/TicketRow';
 import { TicketDetailDialog } from '@/components/support/TicketDetail/TicketDetailDialog';
+import { type SupportTicketListItemDto } from '@/services/supportTicketApi';
 
 export function TicketManagement() {
   const [pageNumber, setPageNumber] = useState(1);
@@ -54,8 +55,9 @@ export function TicketManagement() {
   };
 
   const totalPages = data?.totalPages ?? 1;
-  const openCount = data?.items.filter((t) => t.status === 'Open').length ?? 0;
-  const pendingCount = data?.items.filter((t) => t.status === 'Processing').length ?? 0;
+  // TypeScript sẽ tự động hiểu `t` là SupportTicketListItemDto nếu useGetTickets chuẩn
+  const openCount = data?.items.filter((t: SupportTicketListItemDto) => t.status === 'Open').length ?? 0;
+  const pendingCount = data?.items.filter((t: SupportTicketListItemDto) => t.status === 'Processing').length ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,13 +83,13 @@ export function TicketManagement() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Open (this page)</CardDescription>
-            <CardTitle className="flex items-center gap-2 text-2xl text-blue-600">{openCount}</CardTitle>
+            <CardTitle className="text-blue-600 flex items-center gap-2 text-2xl">{openCount}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>In Progress (this page)</CardDescription>
-            <CardTitle className="flex items-center gap-2 text-2xl text-yellow-600">{pendingCount}</CardTitle>
+            <CardTitle className="text-yellow-600 flex items-center gap-2 text-2xl">{pendingCount}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -114,7 +116,7 @@ export function TicketManagement() {
 
         <CardContent>
           {isError && (
-            <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+            <div className="bg-destructive/5 text-destructive border-destructive/20 mb-4 rounded-lg border p-4 text-sm">
               Failed to load tickets. Please refresh and try again.
             </div>
           )}
@@ -136,7 +138,7 @@ export function TicketManagement() {
                   Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} />)
                 ) : !data?.items.length ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-muted-foreground h-32 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <Ticket className="h-8 w-8 opacity-30" />
                         No tickets match the current filter.
@@ -205,7 +207,7 @@ export function TicketManagement() {
             <AlertDialogDescription>
               Are you sure you want to delete this ticket? This action cannot be undone.
               <br />
-              <span className="font-medium">Note: only tickets with status "Open" can be deleted.</span>
+              <span className="font-medium">Note: only tickets with status &quot;Open&quot; can be deleted.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -213,7 +215,7 @@ export function TicketManagement() {
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={deleteTicket.isPending}
-              className="bg-destructive hover:bg-destructive/90 text-white"
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               {deleteTicket.isPending ? 'Deleting...' : 'Delete Ticket'}
             </AlertDialogAction>

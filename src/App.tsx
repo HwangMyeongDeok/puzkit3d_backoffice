@@ -30,6 +30,7 @@ import SystemConfigurationsPage from './pages/system-config/SystemConfigurations
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import CatalogPage from './pages/catalog/CatalogPage';
 import FormulaManagement from './pages/fomula/FormulaManagement';
+import DriveManagement from './pages/drive/DriveManagement';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -265,6 +266,15 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['Business Manager']}>
                   <FormulaManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/drive-management"
+              element={
+                <ProtectedRoute allowedRoles={['Business Manager']}>
+                  <DriveManagement />
                 </ProtectedRoute>
               }
             />

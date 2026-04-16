@@ -2,19 +2,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { masterDataApi } from '@/services/masterDataApi';
 import { toast } from 'sonner';
+import type { AssemblyMethod, Capability, Drive, Material, Topic } from '@/types/types';
 
 export const masterDataKeys = {
   topics: ['master-data', 'topics'] as const,
   materials: ['master-data', 'materials'] as const,
   capabilities: ['master-data', 'capabilities'] as const,
   assemblyMethods: ['master-data', 'assembly-methods'] as const,
+  drives: ['master-data', 'drives'] as const,
 };
 
-// ─── QUERIES (Ông đã viết) ───
+// ─── QUERIES ───
 export const useTopics = () => useQuery({ queryKey: masterDataKeys.topics, queryFn: masterDataApi.getTopics, staleTime: 5 * 60 * 1000 });
 export const useMaterials = () => useQuery({ queryKey: masterDataKeys.materials, queryFn: masterDataApi.getMaterials, staleTime: 5 * 60 * 1000 });
 export const useCapabilities = () => useQuery({ queryKey: masterDataKeys.capabilities, queryFn: masterDataApi.getCapabilities, staleTime: 5 * 60 * 1000 });
 export const useAssemblyMethods = () => useQuery({ queryKey: masterDataKeys.assemblyMethods, queryFn: masterDataApi.getAssemblyMethods, staleTime: 5 * 60 * 1000 });
+export const useDrives = () => useQuery({ queryKey: masterDataKeys.drives, queryFn: masterDataApi.getDrives, staleTime: 5 * 60 * 1000 });
 
 // ─── MUTATIONS (TOPICS) ───
 export const useCreateTopic = () => {
@@ -23,7 +26,7 @@ export const useCreateTopic = () => {
 };
 export const useUpdateTopic = () => {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => masterDataApi.updateTopic(id, data), onSuccess: () => { toast.success('Topic updated'); qc.invalidateQueries({ queryKey: masterDataKeys.topics }); }});
+  return useMutation({ mutationFn: ({ id, data }: { id: string, data: Partial<Topic> }) => masterDataApi.updateTopic(id, data), onSuccess: () => { toast.success('Topic updated'); qc.invalidateQueries({ queryKey: masterDataKeys.topics }); }});
 };
 export const useDeleteTopic = () => {
   const qc = useQueryClient();
@@ -37,7 +40,7 @@ export const useCreateMaterial = () => {
 };
 export const useUpdateMaterial = () => {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => masterDataApi.updateMaterial(id, data), onSuccess: () => { toast.success('Material updated'); qc.invalidateQueries({ queryKey: masterDataKeys.materials }); }});
+  return useMutation({ mutationFn: ({ id, data }: { id: string, data: Partial<Material> }) => masterDataApi.updateMaterial(id, data), onSuccess: () => { toast.success('Material updated'); qc.invalidateQueries({ queryKey: masterDataKeys.materials }); }});
 };
 export const useDeleteMaterial = () => {
   const qc = useQueryClient();
@@ -51,7 +54,7 @@ export const useCreateCapability = () => {
 };
 export const useUpdateCapability = () => {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => masterDataApi.updateCapability(id, data), onSuccess: () => { toast.success('Capability updated'); qc.invalidateQueries({ queryKey: masterDataKeys.capabilities }); }});
+  return useMutation({ mutationFn: ({ id, data }: { id: string, data: Partial<Capability> }) => masterDataApi.updateCapability(id, data), onSuccess: () => { toast.success('Capability updated'); qc.invalidateQueries({ queryKey: masterDataKeys.capabilities }); }});
 };
 export const useDeleteCapability = () => {
   const qc = useQueryClient();
@@ -65,9 +68,23 @@ export const useCreateAssemblyMethod = () => {
 };
 export const useUpdateAssemblyMethod = () => {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => masterDataApi.updateAssemblyMethod(id, data), onSuccess: () => { toast.success('Assembly Method updated'); qc.invalidateQueries({ queryKey: masterDataKeys.assemblyMethods }); }});
+  return useMutation({ mutationFn: ({ id, data }: { id: string, data: Partial<AssemblyMethod> }) => masterDataApi.updateAssemblyMethod(id, data), onSuccess: () => { toast.success('Assembly Method updated'); qc.invalidateQueries({ queryKey: masterDataKeys.assemblyMethods }); }});
 };
 export const useDeleteAssemblyMethod = () => {
   const qc = useQueryClient();
   return useMutation({ mutationFn: masterDataApi.deleteAssemblyMethod, onSuccess: () => { toast.success('Assembly Method deleted'); qc.invalidateQueries({ queryKey: masterDataKeys.assemblyMethods }); }});
+};
+
+// ─── MUTATIONS (DRIVES) ───
+export const useCreateDrive = () => {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: masterDataApi.createDrive, onSuccess: () => { toast.success('Drive created'); qc.invalidateQueries({ queryKey: masterDataKeys.drives }); }});
+};
+export const useUpdateDrive = () => {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: ({ id, data }: { id: string, data: Partial<Drive> }) => masterDataApi.updateDrive(id, data), onSuccess: () => { toast.success('Drive updated'); qc.invalidateQueries({ queryKey: masterDataKeys.drives }); }});
+};
+export const useDeleteDrive = () => {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: masterDataApi.deleteDrive, onSuccess: () => { toast.success('Drive deleted'); qc.invalidateQueries({ queryKey: masterDataKeys.drives }); }});
 };

@@ -1,6 +1,6 @@
 // src/services/masterDataApi.ts
 import { axiosInstance } from '@/lib/axios';
-import type { AssemblyMethod, Capability, Material, Topic } from '@/types/types';
+import type { AssemblyMethod, Capability, Material, Topic, Drive } from '@/types/types';
 
 interface ItemsEnvelope<T> {
   items: T[];
@@ -48,4 +48,13 @@ export const masterDataApi = {
   createAssemblyMethod: async (data: Partial<AssemblyMethod>) => axiosInstance.post('/assembly-methods', data),
   updateAssemblyMethod: async (id: string, data: Partial<AssemblyMethod>) => axiosInstance.put(`/assembly-methods/${id}`, data),
   deleteAssemblyMethod: async (id: string) => axiosInstance.delete(`/assembly-methods/${id}`),
+
+  // ─── DRIVES ───
+  getDrives: async (): Promise<Drive[]> => {
+    const response = await axiosInstance.get<ApiResponse<Drive>>('/drives', { params: { pageNumber: 1, pageSize: 100, ascending: true } });
+    return extractItems(response.data);
+  },
+  createDrive: async (data: Partial<Drive>) => axiosInstance.post('/drives', data),
+  updateDrive: async (id: string, data: Partial<Drive>) => axiosInstance.put(`/drives/${id}`, data),
+  deleteDrive: async (id: string) => axiosInstance.delete(`/drives/${id}`),
 };

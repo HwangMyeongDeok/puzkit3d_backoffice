@@ -5,9 +5,13 @@ import { MediaViewer } from '@/components/support/MediaViewer';
 import { TicketStatusBadge, InfoRow } from '../shared';
 import { TICKET_TYPE_LABEL } from '../constants';
 
+// 👉 Import type chuẩn
+import type { SupportTicketDto } from '@/services/supportTicketApi'; // Hoặc đường dẫn file type của bạn
+import type { InstockCustomerOrderDto } from '@/types/types'; 
+
 interface Props {
-  ticket: any;
-  orderData: any;
+  ticket: SupportTicketDto;
+  orderData?: InstockCustomerOrderDto | null;
 }
 
 export function TicketSummaryCard({ ticket, orderData }: Props) {

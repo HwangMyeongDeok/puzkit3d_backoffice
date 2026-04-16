@@ -6,11 +6,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 // SỬ DỤNG HOOK MỚI
 import { useAllTopics, useCatalogList } from '@/hooks/useCatalogQueries';
-import type {MaterialItem, DriveItem, CatalogItemBase } from '@/services/catalogApi';
+import type { MaterialItem, DriveItem, CatalogItemBase } from '@/services/catalogApi';
 
 import type { ProductFormValues } from '@/pages/manager/product-editor/schema';
 import type { ProductFiles } from '@/components/InstockProductEditor/ProductInfoTab/ProductInfoTab';
 import type { VariantFormValues } from '@/pages/manager/product-editor/schema';
+import { ChevronDown, ChevronRight, ImageIcon } from 'lucide-react';
+import React, { useState } from 'react';
 
 export interface VariantPriceDraft {
   priceId: string;
@@ -68,6 +70,11 @@ export function PreviewSummary({
   const topicName = topics.find(t => t.id === productDraftData?.topicId)?.name || 'Not selected';
   const materialName = materials.find(m => m.id === productDraftData?.materialId)?.name || 'Not selected';
 
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+const toggleRow = (id: string) => {
+  setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+};
   // Cập nhật: Map mảng assemblyMethodIds thay vì 1 string
   const assemblyMethodNames = productDraftData?.assemblyMethodIds
     ?.map(id => assemblyMethods.find(a => a.id === id)?.name)
@@ -148,13 +155,13 @@ export function PreviewSummary({
                   <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Piece Count</p>
                   <p className="font-medium text-slate-800 text-sm">{productDraftData?.totalPieceCount}</p>
                 </div>
-                
+
                 {/* Dàn layout lại cho các mảng nhiều phần tử ở bên dưới */}
                 <div className="col-span-2 sm:col-span-3 pt-2 border-t mt-2">
-                  <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Methods</p>
+                  <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Assembly Methods</p>
                   <p className="font-medium text-slate-800 text-sm">{assemblyMethodNames}</p>
                 </div>
-                
+
                 <div className="col-span-2 sm:col-span-3 pt-2 border-t mt-2">
                   <p className="text-xs text-slate-500 mb-1 font-medium uppercase">Capabilities</p>
                   <p className="font-medium text-brand text-sm">{capabilityNames}</p>
@@ -168,8 +175,12 @@ export function PreviewSummary({
 
               <div>
                 <p className="text-sm text-slate-500 mb-1">Product Description</p>
-                <div className="text-sm bg-white p-3 rounded border text-slate-700 max-h-32 overflow-y-auto whitespace-pre-wrap">
-                  {productDraftData?.description || "No description provided..."}
+                <div className="text-sm bg-white p-3 rounded border text-slate-700 max-h-32 overflow-y-auto">
+                  {productDraftData?.description ? (
+                    <div dangerouslySetInnerHTML={{ __html: productDraftData.description }} />
+                  ) : (
+                    "No description provided..."
+                  )}
                 </div>
               </div>
             </div>
@@ -186,34 +197,90 @@ export function PreviewSummary({
             <Table>
               <TableHeader className="bg-slate-100">
                 <TableRow>
-                  <TableHead>Variant (Color)</TableHead>
+                  <TableHead className="w-10"></TableHead> {/* Cột cho nút xổ xuống */}
+                  <TableHead>Color</TableHead>
+                  <TableHead>Dimensions (mm)</TableHead>
                   <TableHead>Initial Stock</TableHead>
                   <TableHead>Applicable Prices</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {variantsList.map(v => (
-                  <TableRow key={v.localId}>
-                    <TableCell className="font-medium">{v.color}</TableCell>
-                    <TableCell>
-                      <span className="bg-slate-100 px-2 py-1 rounded-md font-semibold">
-                        {v.initialStock}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {v.prices.map(p => (
-                          <div key={p.priceId} className="flex justify-between items-center text-sm border-b border-slate-100 pb-1 last:border-0">
-                            <span className="text-slate-600">{p.priceName}:</span>
-                            <span className="font-medium text-brand">
-                              {p.unitPrice ? p.unitPrice.toLocaleString('vi-VN') : 0} VND
-                            </span>
+                {variantsList.map(v => {
+                  const isExpanded = expandedRows[v.localId];
+
+                  return (
+                    <React.Fragment key={v.localId}>
+                      {/* DÒNG CHÍNH */}
+                      <TableRow className={isExpanded ? "bg-slate-50 border-b-0" : ""}>
+                        <TableCell>
+                          <button
+                            onClick={() => toggleRow(v.localId)}
+                            className="p-1 rounded-md hover:bg-slate-200 transition-colors text-slate-500"
+                          >
+                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </button>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {v.color}
+                            {v.previewImages && v.previewImages.length > 0 && (
+                              <span className="flex items-center gap-1 text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                                <ImageIcon className="w-3 h-3" /> {v.previewImages.length}
+                              </span>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        </TableCell>
+                        <TableCell>
+                          {v.assembledLengthMm} x {v.assembledWidthMm} x {v.assembledHeightMm} mm
+                        </TableCell>
+                        <TableCell>
+                          <span className="bg-slate-100 px-2 py-1 rounded-md font-semibold">
+                            {v.initialStock}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {v.prices.map(p => (
+                              <div key={p.priceId} className="flex justify-between items-center text-sm border-b border-slate-100 pb-1 last:border-0">
+                                <span className="text-slate-600">{p.priceName}:</span>
+                                <span className="font-medium text-brand">
+                                  {p.unitPrice ? p.unitPrice.toLocaleString('vi-VN') : 0} VND
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+
+                      {/* DÒNG MỞ RỘNG HIỂN THỊ HÌNH ẢNH */}
+                      {isExpanded && (
+                        <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                          <TableCell colSpan={5} className="p-0 border-b">
+                            <div className="px-12 py-4 animate-in slide-in-from-top-2 fade-in duration-200">
+                              <h4 className="text-sm font-semibold text-slate-700 mb-3">Variant Images</h4>
+
+                              {!v.previewImages || v.previewImages.length === 0 ? (
+                                <p className="text-sm text-slate-500 italic">No images uploaded for this variant.</p>
+                              ) : (
+                                <div className="flex flex-wrap gap-3">
+                                  {v.previewImages.map((img: any, idx: number) => {
+                                    // Kiểm tra nếu là object File thì tạo ObjectURL để preview, nếu là string/URL thì dùng luôn
+                                    const src = img instanceof File ? URL.createObjectURL(img) : img;
+                                    return (
+                                      <div key={idx} className="relative group w-20 h-20 rounded-md overflow-hidden border shadow-sm bg-white">
+                                        <img src={src} alt={`${v.color}-${idx}`} className="w-full h-full object-cover" />
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
