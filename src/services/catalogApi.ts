@@ -39,6 +39,7 @@ export interface DriveItem {
   name: string;
   description: string;
   minVolume: number;
+  quantity: number;
   isActive?: boolean;
 }
 
@@ -330,10 +331,13 @@ export async function getAssignedDrivesForCapability(capabilityId: string) {
   return response.data;
 }
 
-export async function getActiveDrivesForCapabilities(payload: GetDrivesByCapabilitiesPayload) {
-  const response = await axiosInstance.post<DriveItem[]>(
+export async function getActiveDrivesForCapabilities(capabilityIds: string[]) {
+  const params = new URLSearchParams();
+  capabilityIds.forEach(id => params.append('CapabilityIds', id));
+
+  const response = await axiosInstance.get<DriveItem[]>(
     '/capabilities/drives', 
-    payload
+    { params }
   );
   return response.data;
 }
@@ -417,14 +421,16 @@ export async function getActiveCapabilitiesForTopicAndMaterial(
 }
 
 export async function getActiveAssemblyMethodsForCapabilityAndMaterial(
-  capabilityId: string,
-  materialId: string
+  materialId: string,
+  capabilityIds: string[]
 ) {
+  const params = new URLSearchParams();
+  params.append('MaterialId', materialId);
+  capabilityIds.forEach(id => params.append('CapabilityIds', id));
+
   const response = await axiosInstance.get<FilterBriefItem[]>(
     "/filters/filter-assembly-method",
-    {
-      params: { capabilityId, materialId },
-    }
+    { params }
   );
   return response.data;
 }

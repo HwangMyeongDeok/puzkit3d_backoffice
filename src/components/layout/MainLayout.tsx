@@ -124,6 +124,12 @@ export function MainLayout() {
       href: '/formula-management',
       icon: Settings,
       roles: ['Business Manager'],
+    },
+    {
+      title: 'Drive Management',
+      href: '/drive-management',
+      icon: Settings,
+      roles: ['Business Manager'],
     }
   ];
 

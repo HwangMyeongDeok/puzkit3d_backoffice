@@ -43,8 +43,8 @@ export interface UpdateValidationPayload {
 // Request Body DTO
 export interface CalculateFormulaRequestDto {
   capabilityIds?: string[];
-  materialIds?: string[];
-  topicIds?: string[];
+  materialId?: string;
+  topicId?: string;
   assemblyMethodIds?: string[];
   pieceCount?: number;
 }
@@ -55,7 +55,7 @@ export interface CalculateFormulaResponseDto {
   validationOutput: string;
 }
 export const formulaApi = {
-getFormulas: async () => {
+  getFormulas: async () => {
     const { data } = await axiosInstance.get<Formula[]>("/formulas");
     return data;
   },
@@ -93,7 +93,7 @@ getFormulas: async () => {
   // ==========================================
   calculate: async (formulaCode: string, payload: CalculateFormulaRequestDto) => {
     const { data } = await axiosInstance.post<CalculateFormulaResponseDto>(
-      `/formulas/${formulaCode}/calculate`, 
+      `/formulas/${formulaCode}/calculate`,
       payload
     );
     return data;

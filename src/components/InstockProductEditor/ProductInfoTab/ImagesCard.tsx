@@ -14,7 +14,6 @@ interface ImagesCardProps {
   existingPreviews: [string, string][];
   previewLocalPreviews: string[];
   totalPreviewCount: number;
-  canAddMorePreviews: boolean;
   handlePreviewFilesChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleRemoveExistingPreview: (key: string) => void;
   handleRemoveNewPreview: (index: number) => void;
@@ -31,7 +30,6 @@ export function ImagesCard({
   existingPreviews,
   previewLocalPreviews,
   totalPreviewCount,
-  canAddMorePreviews,
   handlePreviewFilesChange,
   handleRemoveExistingPreview,
   handleRemoveNewPreview
@@ -62,7 +60,7 @@ export function ImagesCard({
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium">Preview Images ({totalPreviewCount}/3)</p>
+          <p className="text-sm font-medium">Preview Images ({totalPreviewCount})</p>
           <input ref={previewInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePreviewFilesChange} />
           <div className="flex flex-wrap gap-3">
             {existingPreviews.map(([key, url]) => (
@@ -81,11 +79,9 @@ export function ImagesCard({
                 </div>
               </div>
             ))}
-            {canAddMorePreviews && (
-              <button type="button" onClick={() => previewInputRef.current?.click()} className="w-28 h-28 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary">
-                <ImagePlus className="h-5 w-5" /> <span className="text-xs font-medium">Add</span>
-              </button>
-            )}
+            <button type="button" onClick={() => previewInputRef.current?.click()} className="w-28 h-28 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary">
+              <ImagePlus className="h-5 w-5" /> <span className="text-xs font-medium">Add</span>
+            </button>
           </div>
         </div>
       </CardContent>

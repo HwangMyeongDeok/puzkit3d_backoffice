@@ -16,7 +16,7 @@ import type { ProductFormValues } from '@/pages/manager/product-editor/schema';
 // =====================================================================
 // COMPONENT EDITOR (Xây dựng bằng TipTap + Shadcn UI + Lucide Icons)
 // =====================================================================
-const RichTextEditor = ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
+export const RichTextEditor = ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
   const editor = useEditor({
     extensions: [StarterKit],
     content: value || '',
@@ -151,23 +151,6 @@ export function BasicInfoCard({ form, isCreateMode }: BasicInfoCardProps) {
             )}
           />
         </div>
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <RichTextEditor 
-                  value={field.value || ''} 
-                  onChange={field.onChange} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
       </CardContent>
     </Card>
   );

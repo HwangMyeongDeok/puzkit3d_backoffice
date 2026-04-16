@@ -14,8 +14,8 @@ export const catalogKeys = {
     [...catalogKeys.all, 'active-drives-by-capabilities', [...capabilityIds].sort().join(',')] as const,
   filteredCapabilities: (topicId: string, materialId: string) => 
     [...catalogKeys.all, 'filtered-capabilities', topicId, materialId] as const,
-  filteredAssemblyMethods: (capabilityId: string, materialId: string) => 
-    [...catalogKeys.all, 'filtered-assembly-methods', capabilityId, materialId] as const,
+  filteredAssemblyMethods: (capabilityIds: string[], materialId: string) => 
+    [...catalogKeys.all, 'filtered-assembly-methods', [...capabilityIds].sort().join(','), materialId] as const,
 };
 
 // ─── QUERIES (Lấy danh sách Catalog) ───
@@ -188,8 +188,8 @@ export const useAssignedCapabilityDrives = (capabilityId: string) =>
 export const useActiveDrivesByCapabilities = (capabilityIds: string[]) => {
   return useQuery({
     queryKey: catalogKeys.activeDrivesByCapabilities(capabilityIds),
-    queryFn: () => catalogApi.getActiveDrivesForCapabilities({ capabilityIds }),
-    enabled: capabilityIds.length > 0, // Chỉ chạy API nếu có truyền id vào mảng
+    queryFn: () => catalogApi.getActiveDrivesForCapabilities(capabilityIds),
+    enabled: Array.isArray(capabilityIds) && capabilityIds.length > 0, 
     staleTime: 5 * 60 * 1000,
   });
 };
@@ -271,12 +271,12 @@ export const useFilteredCapabilities = (topicId: string, materialId: string) => 
 };
 
 // Hook lấy danh sách active assembly methods dựa trên capability và material
-export const useFilteredAssemblyMethods = (capabilityId: string, materialId: string) => {
+export const useFilteredAssemblyMethods = (capabilityIds: string[], materialId: string) => {
   return useQuery({
-    queryKey: catalogKeys.filteredAssemblyMethods(capabilityId, materialId),
-    queryFn: () => catalogApi.getActiveAssemblyMethodsForCapabilityAndMaterial(capabilityId, materialId),
-    // Chỉ gọi API khi đã có đầy đủ capabilityId và materialId
-    enabled: !!capabilityId && !!materialId, 
+    queryKey: catalogKeys.filteredAssemblyMethods(capabilityIds, materialId),
+    queryFn: () => catalogApi.getActiveAssemblyMethodsForCapabilityAndMaterial(materialId, capabilityIds),
+    // Chỉ gọi API khi đã có đầy đủ capabilityIds và materialId
+    enabled: capabilityIds.length > 0 && !!materialId, 
     staleTime: 5 * 60 * 1000, // Cache 5 phút
   });
 };

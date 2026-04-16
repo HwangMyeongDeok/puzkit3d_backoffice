@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Eye, Trash2, Truck } from 'lucide-react';
 
 import type { SupportTicketListItemDto } from '@/services/supportTicketApi';
+import type { DeliveryTracking } from '@/services/deliveryApi'; // Đường dẫn file deliveryApi
 import { useDeliveryTrackings, useCreateDeliveryTracking } from '@/hooks/useDeliveryQueries';
 import { TICKET_TYPE_LABEL, formatDateTime } from './constants';
 import { TicketStatusBadge } from './shared';
@@ -36,14 +37,14 @@ export function TicketRow({
   const { data: deliveriesRes } = useDeliveryTrackings(ticket.orderId, true);
 
   const supportShipment = deliveriesRes?.data?.find(
-    (d: any) => (d.type === 'Return' || d.type === 'Resend') && d.supportTicketId === ticket.id
+    (d: DeliveryTracking) => (d.type === 'Return' || d.type === 'Resend') && d.supportTicketId === ticket.id
   );
 
   const canDelete = ticket.status === 'Open';
   const hasShipment = !!supportShipment;
 
   const showReplacementBtn =
-    (ticket.type === 'ReplacePart' || ticket.type === 'Exchange') &&
+    (ticket.type === 'ReplaceDrive' || ticket.type === 'Exchange') &&
     ticket.status === 'Processing' &&
     !hasShipment;
 
@@ -55,7 +56,8 @@ export function TicketRow({
   return (
     <TableRow>
       <TableCell className="font-mono text-xs font-medium">
-        {(ticket as any).code ?? ticket.id}
+        {/* 👉 Đã bỏ (ticket as SupportTicketDto), gọi trực tiếp ticket.code */}
+        {ticket.code ?? ticket.id}
       </TableCell>
       <TableCell>
         <Badge variant="outline" className="text-xs">

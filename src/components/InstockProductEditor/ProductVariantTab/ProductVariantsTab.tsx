@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Edit, PowerOff, CheckCircle, Loader2, Package } from 'lucide-react';
-import { useQueries } from '@tanstack/react-query'; // IMPORT THÊM USEQUERIES
+import { Plus, Edit, PowerOff, CheckCircle, Loader2, Package, ChevronDown, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -22,10 +21,8 @@ import { useVariantsWithInventory, type VariantWithInventory } from '@/hooks/use
 import { useCreateInventory, useUpdateInventory } from '@/hooks/useInventoryMutations';
 import { useCreatePriceDetail, usePriceDetailsByVariantId, useUpdatePriceDetail, useDeletePriceDetail } from '@/hooks/useInstockPriceDetailQueries';
 
-// CẬP NHẬT IMPORT: Đưa catalogKeys và catalogApi vào để dùng cho useQueries
-// Nhớ check lại đường dẫn thực tế trong project của bạn nhé!
-import { catalogKeys } from '@/hooks/useCatalogQueries'; 
-import * as catalogApi from '@/services/catalogApi';
+// CHỈ IMPORT HOOK MỚI, KHÔNG CẦN API HAY KEYS NỮA
+import { useActiveDrivesByCapabilities } from '@/hooks/useCatalogQueries'; 
 
 import { handleErrorToast } from '@/lib/error-handler';
 import { uploadApi } from '@/services/uploadApi';
@@ -76,39 +73,22 @@ export function ProductVariantsTab({
   const [editingVariant, setEditingVariant] = useState<VariantWithInventory | null>(null);
   const [variantToDeactivate, setVariantToDeactivate] = useState<VariantWithInventory | null>(null);
 
+  // === State quản lý dòng mở rộng trong bảng ===
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
   const { data: editingPriceDetails } = usePriceDetailsByVariantId(editingVariant?.id);
   const updatePriceDetailMutation = useUpdatePriceDetail();
   const deletePriceDetailMutation = useDeletePriceDetail();
 
   // =====================================================================
-  // LẤY VÀ LỌC TRÙNG LẶP DRIVES DỰA TRÊN CAPABILITIES TỪ TAB 1 BẰNG useQueries
+  // LẤY VÀ LỌC TRÙNG LẶP DRIVES BẰNG HOOK MỚI (CHỈ 1 DÒNG)
   // =====================================================================
   const capabilityIds = productDraftData?.capabilityIds || [];
-
-  const drivesQueries = useQueries({
-    queries: capabilityIds.map((capId: string) => ({
-      queryKey: catalogKeys.capabilityDriveAssignments(capId),
-      queryFn: () => catalogApi.getAssignedDrivesForCapability(capId),
-      enabled: !!capId,
-    }))
-  });
-
-  const validDrives = useMemo(() => {
-    const uniqueDrivesMap = new Map();
-
-    drivesQueries.forEach((query) => {
-      // Đảm bảo API call thành công và trả về một mảng
-      if (query.isSuccess && Array.isArray(query.data)) {
-        query.data.forEach((drive: any) => {
-          if (!uniqueDrivesMap.has(drive.id)) {
-            uniqueDrivesMap.set(drive.id, drive);
-          }
-        });
-      }
-    });
-
-    return Array.from(uniqueDrivesMap.values());
-  }, [drivesQueries]);
+  const { data: validDrives = [] } = useActiveDrivesByCapabilities(capabilityIds);
   // =====================================================================
 
   const editingVariantDraft = useMemo<VariantDraft | undefined>(() => {
@@ -179,7 +159,6 @@ export function ProductVariantsTab({
       for (const v of variantsList) {
         let variantPreviewUrls: string[] = [];
 
-        // Upload Preview Images riêng cho từng Variant
         if (v.previewImages && v.previewImages.length > 0) {
           const variantUploadTasks = v.previewImages.map((file: File, i: number) => 
             uploadApi.uploadFileToS3(file, 'instock-products', `${slug}/variant_${v.color}_${i}_${Date.now()}`)
@@ -194,7 +173,7 @@ export function ProductVariantsTab({
             assembledLengthMm: v.assembledLengthMm,
             assembledWidthMm: v.assembledWidthMm,
             assembledHeightMm: v.assembledHeightMm,
-            previewImages: variantPreviewUrls, // Truyền mảng URLs đã upload
+            previewImages: variantPreviewUrls, 
             isActive: v.isActive
           },
         });
@@ -236,8 +215,6 @@ export function ProductVariantsTab({
       if (updatedData.assembledHeightMm !== editingVariant.assembledHeightMm) variantUpdatePayload.assembledHeightMm = updatedData.assembledHeightMm;
       if (updatedData.isActive !== editingVariant.isActive) variantUpdatePayload.isActive = updatedData.isActive;
 
-      // Cần thêm logic upload/update mảng string cho previewImages nếu làm Edit Mode ở đây
-
       if (Object.keys(variantUpdatePayload).length > 0) {
         await updateVariantMutation.mutateAsync({
           productId,
@@ -246,7 +223,6 @@ export function ProductVariantsTab({
         });
       }
 
-      // Logic Update Inventory
       const currentStock = editingVariant.stockQuantity ?? 0;
       const newStock = updatedData.initialStock;
       if (newStock !== currentStock) {
@@ -257,7 +233,6 @@ export function ProductVariantsTab({
         }
       }
 
-      // Logic Sync Prices (Giữ nguyên)
       const existingPrices = editingPriceDetails || [];
       const draftPrices = updatedData.prices;
 
@@ -313,7 +288,8 @@ export function ProductVariantsTab({
         setVariantsList={setVariantsList}
         onBack={onBack}
         onNext={() => setIsPreviewMode(true)}
-        validDrives={validDrives} // <--- TRUYỀN DANH SÁCH DRIVES XUỐNG WIZARD
+        validDrives={validDrives} 
+        driveDetails={productDraftData?.driveDetails}
       />
     );
   }
@@ -325,7 +301,8 @@ export function ProductVariantsTab({
         initialVariant={editingVariantDraft}
         onSaveEdit={handleWizardEditSave}
         onCancelEdit={() => { setShowEditor(false); setEditingVariant(null); }}
-        validDrives={validDrives} // <--- TRUYỀN DANH SÁCH DRIVES XUỐNG WIZARD
+        validDrives={validDrives} 
+        driveDetails={productDraftData?.driveDetails}
       />
     );
   }
@@ -356,37 +333,92 @@ export function ProductVariantsTab({
               <Table>
                 <TableHeader className="bg-slate-50/50">
                   <TableRow>
-                    <TableHead className="pl-6">SKU</TableHead><TableHead>Color</TableHead><TableHead>Dimensions</TableHead><TableHead>In Stock</TableHead><TableHead>Status</TableHead><TableHead className="text-right pr-6">Actions</TableHead>
+                    <TableHead className="w-10 pl-6"></TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Color</TableHead>
+                    <TableHead>Dimensions</TableHead>
+                    <TableHead>In Stock</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right pr-6">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {variants.map((variant) => (
-                    <TableRow key={variant.id} className="group hover:bg-slate-50/80 transition-colors">
-                      <TableCell className="pl-6 font-mono text-sm font-medium text-slate-700">{variant.sku}</TableCell>
-                      <TableCell>{variant.color}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{variant.assembledLengthMm} × {variant.assembledWidthMm} × {variant.assembledHeightMm} mm</TableCell>
-                      <TableCell>
-                        {variant.hasNoInventory ? (
-                          <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-600">Uninitialized</Badge>
-                        ) : (
-                          <div className="flex items-center gap-1.5 font-medium text-slate-800"><Package className="h-3.5 w-3.5 text-slate-400" />{variant.stockQuantity ?? 0}</div>
+                  {variants.map((variant) => {
+                    const isExpanded = expandedRows[variant.id];
+                    
+                    return (
+                      <React.Fragment key={variant.id}>
+                        {/* DÒNG CHÍNH */}
+                        <TableRow className={`group transition-colors ${isExpanded ? "bg-slate-50 border-b-0 hover:bg-slate-50" : "hover:bg-slate-50/80"}`}>
+                          <TableCell className="pl-6">
+                            <button 
+                              onClick={() => toggleRow(variant.id)}
+                              className="p-1 rounded-md hover:bg-slate-200 transition-colors text-slate-500 flex items-center justify-center"
+                            >
+                              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            </button>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm font-medium text-slate-700">{variant.sku}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {variant.color}
+                              {variant.previewImages && variant.previewImages.length > 0 && (
+                                <span className="flex items-center gap-1 text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full" title={`${variant.previewImages.length} images`}>
+                                  <ImageIcon className="w-3 h-3" /> {variant.previewImages.length}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{variant.assembledLengthMm} × {variant.assembledWidthMm} × {variant.assembledHeightMm} mm</TableCell>
+                          <TableCell>
+                            {variant.hasNoInventory ? (
+                              <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-600">Uninitialized</Badge>
+                            ) : (
+                              <div className="flex items-center gap-1.5 font-medium text-slate-800"><Package className="h-3.5 w-3.5 text-slate-400" />{variant.stockQuantity ?? 0}</div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={variant.isActive ? 'default' : 'secondary'} className={variant.isActive ? "bg-emerald-100 text-emerald-700" : ""}>{variant.isActive ? 'Active' : 'Inactive'}</Badge>
+                          </TableCell>
+                          <TableCell className="pr-6">
+                            <div className="flex justify-end gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="outline" size="sm" onClick={() => { setEditingVariant(variant); setShowEditor(true); }} disabled={toggleMutation.isPending}><Edit className="h-3.5 w-3.5 mr-1.5 text-slate-500" /> Edit</Button>
+                              {variant.isActive ? (
+                                <Button variant="outline" size="sm" onClick={() => setVariantToDeactivate(variant)} disabled={toggleMutation.isPending} className="border-rose-200 text-rose-600 hover:bg-rose-50"><PowerOff className="h-3.5 w-3.5" /></Button>
+                              ) : (
+                                <Button variant="outline" size="sm" onClick={() => handleActivate(variant)} disabled={toggleMutation.isPending} className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"><CheckCircle className="h-3.5 w-3.5" /></Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+
+                        {/* DÒNG MỞ RỘNG (HIỂN THỊ HÌNH ẢNH) */}
+                        {isExpanded && (
+                          <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                            <TableCell colSpan={7} className="p-0 border-b">
+                              <div className="px-14 py-4 animate-in slide-in-from-top-2 fade-in duration-200">
+                                <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                                  <ImageIcon className="w-4 h-4 text-slate-400" /> Variant Images
+                                </h4>
+                                
+                                {!variant.previewImages || variant.previewImages.length === 0 ? (
+                                  <p className="text-sm text-slate-500 italic bg-white p-3 rounded border shadow-sm inline-block">No images uploaded for this variant.</p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-3">
+                                    {variant.previewImages.map((imgStr: string, idx: number) => (
+                                      <div key={idx} className="relative group w-24 h-24 rounded-md overflow-hidden border shadow-sm bg-white hover:ring-2 hover:ring-brand hover:ring-offset-1 transition-all cursor-zoom-in">
+                                        <img src={imgStr} alt={`${variant.sku}-${idx}`} className="w-full h-full object-cover" />
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={variant.isActive ? 'default' : 'secondary'} className={variant.isActive ? "bg-emerald-100 text-emerald-700" : ""}>{variant.isActive ? 'Active' : 'Inactive'}</Badge>
-                      </TableCell>
-                      <TableCell className="pr-6">
-                        <div className="flex justify-end gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="outline" size="sm" onClick={() => { setEditingVariant(variant); setShowEditor(true); }} disabled={toggleMutation.isPending}><Edit className="h-3.5 w-3.5 mr-1.5 text-slate-500" /> Edit</Button>
-                          {variant.isActive ? (
-                            <Button variant="outline" size="sm" onClick={() => setVariantToDeactivate(variant)} disabled={toggleMutation.isPending} className="border-rose-200 text-rose-600 hover:bg-rose-50"><PowerOff className="h-3.5 w-3.5" /></Button>
-                          ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleActivate(variant)} disabled={toggleMutation.isPending} className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"><CheckCircle className="h-3.5 w-3.5" /></Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
