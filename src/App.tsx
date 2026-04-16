@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { useAuthStore } from './store/useAuthStore';
 import { MainLayout } from './components/layout/MainLayout';
-import { StaffPartnerProductRequestsPage } from './pages/staff/StaffPartnerProductRequestsPage';
+import PartnerProductRequestsListPage from './pages/partner-product-requests/PartnerProductRequestsListPage';
+import PartnerProductRequestDetailPage from './pages/partner-product-requests/PartnerProductRequestDetailPage';
 import { CatalogPage } from './pages/catalog/CatalogPage';
 
 import { Login } from './pages/auth/Login';
@@ -19,15 +20,24 @@ import { Toaster } from './components/ui/sonner';
 import { InventoryManagementPage } from './pages/manager/inventory/InventoryManagement';
 import { TicketManagement } from './pages/support/TicketManagement';
 import FeedbackManagement from './pages/feedback/FeedbackManagement';
-import { PartnerProductsPage } from "./pages/partner-products/PartnerProductsPage";
-import { PartnerProductCreatePage } from "./pages/partner-products/PartnerProductCreatePage";
-import { PartnerProductEditPage } from "./pages/partner-products/PartnerProductEditPage";
+import { PartnerProductsPage } from './pages/partner-products/PartnerProductsPage';
+import { PartnerProductCreatePage } from './pages/partner-products/PartnerProductCreatePage';
+import { PartnerProductEditPage } from './pages/partner-products/PartnerProductEditPage';
 import { ImportServiceConfigsPage } from './pages/ImportServiceConfigsPage';
+import RequestManagement from './pages/requests/RequestManagement';
+import RequirementManagement from './pages/requirement/RequirementManagement';
+import { ProductionTemplatePage } from './pages/production-template/ProductionTemplatePage';
+import QuotationPage from './pages/quotation/QuotationPage';
+import SystemConfigurationsPage from './pages/system-config/SystemConfigurationsPage';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       retry: 1,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
     },
   },
 });
@@ -41,13 +51,12 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ReactQueryDevtools initialIsOpen={false} buttonPosition="top-right" />
       <BrowserRouter>
         <Routes>
-          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* Protected Routes Wrapper - Bọc từ ngoài cửa để chặn user chưa login */}
           <Route
             element={
               <ProtectedRoute>
@@ -73,7 +82,6 @@ function App() {
               }
             />
 
-            {/* Partner Approvals: Accessible ONLY by MANAGER */}
             <Route
               path="/partners"
               element={
@@ -109,6 +117,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/catalog"
               element={
@@ -117,6 +126,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/import-service-configs"
               element={
@@ -130,10 +140,20 @@ function App() {
               path="/partner-product-requests"
               element={
                 <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
-                  <StaffPartnerProductRequestsPage />
+                  <PartnerProductRequestsListPage />
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/partner-product-requests/:id"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
+                  <PartnerProductRequestDetailPage />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/feedback-management"
               element={
@@ -143,7 +163,6 @@ function App() {
               }
             />
 
-            {/* Product Editor: Create & Edit Instock Products */}
             <Route
               path="/instock-products/new"
               element={
@@ -152,6 +171,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/instock-products/:id/edit"
               element={
@@ -161,7 +181,6 @@ function App() {
               }
             />
 
-            {/* Instock Products Management: Accessible by STAFF and MANAGER */}
             <Route
               path="/instock-products"
               element={
@@ -171,7 +190,6 @@ function App() {
               }
             />
 
-            {/* Price Management: Accessible by MANAGER only */}
             <Route
               path="/price-management"
               element={
@@ -193,12 +211,58 @@ function App() {
             <Route
               path="/support-tickets"
               element={
-                <ProtectedRoute allowedRoles={['Staff', "Business Manager"]}>
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
                   <TicketManagement />
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/requests"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
+                  <RequestManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/requests/:id/quotation"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
+                  <QuotationPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/requirements"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
+                  <RequirementManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/production-template"
+              element={
+                <ProtectedRoute allowedRoles={['Staff', 'Business Manager']}>
+                  <ProductionTemplatePage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/system-configurations"
+              element={
+                <ProtectedRoute allowedRoles={['Business Manager']}>
+                  <SystemConfigurationsPage />
+                </ProtectedRoute>
+              }
+            />
           </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster />

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 export const partKeys = {
   all: ['parts'] as const,
   lists: (productId: string) => [...partKeys.all, productId] as const,
+  detail: (partId: string) => [...partKeys.all, 'detail', partId] as const,
 };
 
 export const useParts = (productId: string) => {
@@ -14,6 +15,14 @@ export const useParts = (productId: string) => {
     queryKey: partKeys.lists(productId),
     queryFn: () => partApi.getPartsByProductId(productId),
     enabled: !!productId, // Chỉ gọi API khi đã có productId
+  });
+};
+
+export const usePartById = (productId: string, partId: string | null) => {
+  return useQuery({
+    queryKey: partKeys.detail(partId || ''),
+    queryFn: () => partApi.getPartById(productId, partId!),
+    enabled: !!partId,
   });
 };
 

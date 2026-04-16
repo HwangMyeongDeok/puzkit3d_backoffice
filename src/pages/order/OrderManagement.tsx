@@ -20,9 +20,8 @@ import {
   ImagePlus,
   X,
   ChevronDown,
- ChevronRight,
+  ChevronRight,
 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
 
 import {
   INSTOCK_ORDER_STATUSES,
@@ -100,8 +99,6 @@ import {
   useUpdateHandOverImage,
 } from '@/hooks/useDeliveryQueries';
 import { uploadApi } from '@/services/uploadApi';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 10;
 const ALL_STATUS = '__ALL__';
@@ -1173,7 +1170,7 @@ function OrderDetailContent({
             <InfoRow label="Subtotal" value={formatCurrency(order.subTotalAmount)} />
             <InfoRow label="Shipping Fee" value={formatCurrency(order.shippingFee)} />
             <InfoRow label="Used Coin" value={order.usedCoinAmount.toLocaleString('vi-VN')} />
-            <InfoRow label="Coin Discount" value={formatCurrency(order.usedCoinAmountAsMoney)} />
+            <InfoRow label="Coin Discount" value={formatCurrency(order.usedCoinAmount)} />
             <Separator />
             <InfoRow label="Grand Total" value={formatCurrency(order.grandTotalAmount)} />
             <Separator />
@@ -1740,6 +1737,7 @@ function OrderDetailSkeleton() {
     </div>
   );
 }
+
 function OrderDetailDialog({
   orderId,
   open,
@@ -1749,21 +1747,18 @@ function OrderDetailDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const queryClient = useQueryClient();
   const { data: order, isLoading, error } = useCustomerOrderById(orderId);
   const { data: deliveryTracking } = useInstockOrderDeliveryTracking(orderId, open && !!orderId);
 
-  const displayOrder =
-    order && deliveryTracking?.statusUpdated
-      ? { ...order, status: deliveryTracking.orderStatus }
-      : order;
+  const trackingData = deliveryTracking?.data ?? [];
+  const latestTracking = trackingData[0];
 
-  useEffect(() => {
-    if (open && orderId && deliveryTracking?.statusUpdated) {
-      queryClient.invalidateQueries({ queryKey: ['instock-orders', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['instock-orders', 'detail', orderId] });
-    }
-  }, [deliveryTracking?.statusUpdated, open, orderId, queryClient]);
+  const trackingLogs =
+    trackingData.map((item) => ({
+      status: item.status,
+      updatedDate: item.updatedAt,
+      description: item.note ?? null,
+    })) ?? [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1787,12 +1782,12 @@ function OrderDetailDialog({
               <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
                 Failed to load order details. Please try again.
               </div>
-            ) : displayOrder ? (
+            ) : order ? (
               <OrderDetailContent
-                order={displayOrder}
-                ghnStatus={deliveryTracking?.ghnStatus}
-                statusUpdated={deliveryTracking?.statusUpdated ?? false}
-                trackingLogs={deliveryTracking?.logs}
+                order={order}
+                ghnStatus={latestTracking?.status}
+                statusUpdated={false}
+                trackingLogs={trackingLogs}
               />
             ) : null}
           </div>
@@ -1801,6 +1796,7 @@ function OrderDetailDialog({
     </Dialog>
   );
 }
+
 function OrderRow({
   order,
   onView,
@@ -1884,6 +1880,7 @@ function OrderRow({
     </TableRow>
   );
 }
+
 export function OrderManagement() {
   const [activeTab, setActiveTab] = useState<'instock' | 'partner'>('instock');
 
@@ -2309,7 +2306,6 @@ export function OrderManagement() {
           </CardContent>
         </Card>
       )}
-
       <OrderDetailDialog
         orderId={selectedOrderId}
         open={dialogOpen}

@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
-  CreateDeliveryTrackingDto,
   GetCustomerOrdersParams,
   InstockOrderStatus,
   UpdateInstockOrderStatusRequestDto,
@@ -23,13 +22,11 @@ export const INSTOCK_ORDER_STATUSES: InstockOrderStatus[] = [
   'Paid',
   'Processing',
   'Waiting',
-  'Shipping',
   'Delivered',
   'Cancelled',
   'Completed',
   'Returned',
   'HandedOverToDelivery',
-  'Rejected',
 ];
 
 export const useCustomerOrders = (params: GetCustomerOrdersParams) => {

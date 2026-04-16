@@ -43,7 +43,7 @@ const initialForm: UpsertImportServiceConfigRequest = {
 function formatCurrencyInput(value: string) {
   const digitsOnly = value.replace(/\D/g, "");
   if (!digitsOnly) return "";
-  return Number(digitsOnly).toLocaleString("vi-VN");
+  return Number(digitsOnly).toLocaleString("en-US");
 }
 
 function parseCurrencyInput(value: string) {
@@ -86,22 +86,22 @@ function sanitizeIntegerInput(value: string) {
 
 function validateEstimatedDeliveryDays(value: number) {
   if (!Number.isInteger(value)) {
-    return "Số ngày giao dự kiến phải là số nguyên.";
+    return "Estimated delivery days must be an integer.";
   }
 
   if (value < 0 || value > 15) {
-    return "Số ngày giao dự kiến phải trong khoảng từ 0 đến 15 ngày.";
+    return "Estimated delivery days must be between 0 and 15.";
   }
 
   return null;
 }
 
 function formatCurrencyVND(value: number) {
-  return `${value.toLocaleString("vi-VN")} VNĐ`;
+  return `${value.toLocaleString("en-US")} VND`;
 }
 
 function formatPercentage(value: number) {
-  return `${value.toLocaleString("vi-VN")} %`;
+  return `${value.toLocaleString("en-US")} %`;
 }
 
 export function ImportServiceConfigsPage() {
@@ -135,7 +135,7 @@ export function ImportServiceConfigsPage() {
       setConfigs(data.items);
     } catch (err) {
       console.error(err);
-      setError("Không thể tải danh sách cấu hình dịch vụ nhập khẩu.");
+      setError("Unable to load import service configurations.");
     } finally {
       setLoading(false);
     }
@@ -196,7 +196,7 @@ export function ImportServiceConfigsPage() {
       estimatedDeliveryDays: config.estimatedDeliveryDays,
     });
 
-    setBaseShippingFeeInput(config.baseShippingFee.toLocaleString("vi-VN"));
+    setBaseShippingFeeInput(config.baseShippingFee.toLocaleString("en-US"));
     setImportTaxPercentageInput(
       String(config.importTaxPercentage).replace(/,/g, ".")
     );
@@ -276,11 +276,11 @@ export function ImportServiceConfigsPage() {
 
       if (modalMode === "create") {
         await createImportServiceConfig(formData);
-        toast.success("Thêm cấu hình thành công.");
+        toast.success("Configuration created successfully.");
       } else {
         if (!selectedConfigId) return;
         await updateImportServiceConfig(selectedConfigId, formData);
-        toast.success("Cập nhật cấu hình thành công.");
+        toast.success("Configuration updated successfully.");
       }
 
       closeModal();
@@ -289,8 +289,8 @@ export function ImportServiceConfigsPage() {
       console.error(err);
       toast.error(
         modalMode === "create"
-          ? "Thêm cấu hình thất bại."
-          : "Cập nhật cấu hình thất bại."
+          ? "Failed to create configuration."
+          : "Failed to update configuration."
       );
     } finally {
       setSubmitting(false);
@@ -301,16 +301,16 @@ export function ImportServiceConfigsPage() {
     try {
       if (config.isActive) {
         const confirmed = window.confirm(
-          `Bạn có chắc muốn vô hiệu hóa cấu hình của quốc gia "${config.countryName}" không?`
+          `Are you sure you want to disable the configuration for "${config.countryName}"?`
         );
 
         if (!confirmed) return;
 
         await disableImportServiceConfig(config.id);
-        toast.success("Vô hiệu hóa cấu hình thành công.");
+        toast.success("Configuration disabled successfully.");
       } else {
         await enableImportServiceConfig(config.id);
-        toast.success("Kích hoạt cấu hình thành công.");
+        toast.success("Configuration enabled successfully.");
       }
 
       await fetchConfigs();
@@ -318,8 +318,8 @@ export function ImportServiceConfigsPage() {
       console.error(err);
       toast.error(
         config.isActive
-          ? "Vô hiệu hóa cấu hình thất bại."
-          : "Kích hoạt cấu hình thất bại."
+          ? "Failed to disable configuration."
+          : "Failed to enable configuration."
       );
     }
   };
@@ -337,10 +337,10 @@ export function ImportServiceConfigsPage() {
     <div className="relative flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          Cấu hình dịch vụ nhập khẩu
+          Import Service Configurations
         </h1>
         <p className="text-muted-foreground">
-          Quản lý cấu hình dịch vụ nhập khẩu.
+          Manage import service configurations.
         </p>
       </div>
 
@@ -353,14 +353,14 @@ export function ImportServiceConfigsPage() {
             className="inline-flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Thêm cấu hình
+            Add configuration
           </Button>
         </div>
       )}
 
       {loading && (
         <div className="text-sm text-muted-foreground">
-          Đang tải danh sách cấu hình...
+          Loading configurations...
         </div>
       )}
 
@@ -388,36 +388,28 @@ export function ImportServiceConfigsPage() {
                         : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                     }`}
                   >
-                    {config.isActive ? "Đang hoạt động" : "Đã vô hiệu hóa"}
+                    {config.isActive ? "Active" : "Disabled"}
                   </span>
                 </div>
 
                 <CardDescription className="line-clamp-2">
-                  Mã quốc gia: {config.countryCode}
+                  Country code: {config.countryCode}
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="flex flex-col gap-4">
                 <div className="space-y-1 text-sm">
                   <p>
-                    <strong>Phí vận chuyển cơ bản:</strong>{" "}
+                    <strong>Base shipping fee:</strong>{" "}
                     {formatCurrencyVND(config.baseShippingFee)}
                   </p>
                   <p>
-                    <strong>Thuế nhập khẩu:</strong>{" "}
+                    <strong>Import tax:</strong>{" "}
                     {formatPercentage(config.importTaxPercentage)}
                   </p>
-                  {/* <p>
-                    <strong>Số ngày giao dự kiến:</strong>{" "}
-                    {config.estimatedDeliveryDays} ngày
-                  </p> */}
-                  {/* <p>
-                    <strong>Tạo lúc:</strong>{" "}
-                    {new Date(config.createdAt).toLocaleString("vi-VN")}
-                  </p> */}
                   <p>
-                    <strong>Cập nhật lúc:</strong>{" "}
-                    {new Date(config.updatedAt).toLocaleString("vi-VN")}
+                    <strong>Updated at:</strong>{" "}
+                    {new Date(config.updatedAt).toLocaleString("en-US")}
                   </p>
                 </div>
 
@@ -427,7 +419,7 @@ export function ImportServiceConfigsPage() {
                     onClick={() => openUpdateModal(config)}
                   >
                     <Pencil className="mr-2 h-4 w-4" />
-                    Cập nhật
+                    Update
                   </Button>
 
                   <Button
@@ -436,7 +428,7 @@ export function ImportServiceConfigsPage() {
                     onClick={() => handleToggleStatus(config)}
                   >
                     <Power className="mr-2 h-4 w-4" />
-                    {config.isActive ? "Vô hiệu hóa" : "Kích hoạt"}
+                    {config.isActive ? "Disable" : "Enable"}
                   </Button>
                 </div>
               </CardContent>
@@ -452,13 +444,13 @@ export function ImportServiceConfigsPage() {
               <div>
                 <h2 className="text-2xl font-bold">
                   {modalMode === "create"
-                    ? "Thêm cấu hình mới"
-                    : "Cập nhật cấu hình"}
+                    ? "Add new configuration"
+                    : "Update configuration"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {modalMode === "create"
-                    ? "Nhập thông tin để tạo cấu hình dịch vụ nhập khẩu."
-                    : "Chỉnh sửa thông tin cấu hình dịch vụ nhập khẩu."}
+                    ? "Enter the information to create a new import service configuration."
+                    : "Edit the import service configuration details."}
                 </p>
               </div>
 
@@ -473,30 +465,30 @@ export function ImportServiceConfigsPage() {
 
             <div className="space-y-4 px-6 py-5">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Tên quốc gia</label>
+                <label className="text-sm font-medium">Country name</label>
                 <SearchableSelect
                   value={formData.countryName}
                   options={countryOptions}
-                  placeholder="Nhập hoặc chọn tên quốc gia"
-                  emptyText="Không tìm thấy quốc gia"
+                  placeholder="Type or select a country name"
+                  emptyText="No country found"
                   onInputChange={handleCountryInputChange}
                   onSelect={handleCountrySelect}
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Mã quốc gia</label>
+                <label className="text-sm font-medium">Country code</label>
                 <input
                   className="w-full rounded-lg border bg-slate-50 px-3 py-2 text-slate-600 outline-none"
                   value={formData.countryCode}
                   readOnly
-                  placeholder="Mã quốc gia sẽ tự động điền"
+                  placeholder="Country code will be filled automatically"
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Phí vận chuyển cơ bản
+                  Base shipping fee
                 </label>
                 <div className="relative">
                   <input
@@ -507,18 +499,16 @@ export function ImportServiceConfigsPage() {
                     onChange={(e) =>
                       handleChange("baseShippingFee", e.target.value)
                     }
-                    placeholder="Nhập phí vận chuyển cơ bản"
+                    placeholder="Enter base shipping fee"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    VNĐ
+                    VND
                   </span>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Thuế nhập khẩu (%)
-                </label>
+                <label className="text-sm font-medium">Import tax (%)</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -528,7 +518,7 @@ export function ImportServiceConfigsPage() {
                     onChange={(e) =>
                       handleChange("importTaxPercentage", e.target.value)
                     }
-                    placeholder="Nhập phần trăm thuế nhập khẩu"
+                    placeholder="Enter import tax percentage"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                     %
@@ -538,7 +528,7 @@ export function ImportServiceConfigsPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Số ngày giao dự kiến
+                  Estimated delivery days
                 </label>
                 <div className="relative">
                   <input
@@ -561,10 +551,10 @@ export function ImportServiceConfigsPage() {
                         )
                       )
                     }
-                    placeholder="Nhập số ngày từ 0 đến 15"
+                    placeholder="Enter a value from 0 to 15"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    ngày
+                    days
                   </span>
                 </div>
 
@@ -574,7 +564,7 @@ export function ImportServiceConfigsPage() {
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Giá trị hợp lệ từ 0 đến 15 ngày.
+                    Valid range: 0 to 15 days.
                   </p>
                 )}
               </div>
@@ -582,14 +572,14 @@ export function ImportServiceConfigsPage() {
 
             <div className="flex justify-end gap-3 border-t px-6 py-4">
               <Button variant="outline" onClick={closeModal}>
-                Hủy
+                Cancel
               </Button>
               <Button onClick={handleSubmit} disabled={submitting}>
                 {submitting
-                  ? "Đang xử lý..."
+                  ? "Processing..."
                   : modalMode === "create"
-                  ? "Thêm cấu hình"
-                  : "Lưu cập nhật"}
+                  ? "Add configuration"
+                  : "Save changes"}
               </Button>
             </div>
           </div>
